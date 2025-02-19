@@ -1,0 +1,189 @@
+﻿openapi: 3.0.3
+info:
+  title: Grok API
+  description: API for interacting with Grok, an AI assistant created by xAI.
+  version: 1.0.0
+servers:
+  - url: https://api.x.ai/v1
+    description: Official xAI Grok API server
+paths:
+  /chat/completions:
+    post:
+      summary: Create a chat completion with Grok
+      operationId: createChatCompletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: Successful chat completion response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+        '400':
+          description: Invalid request (e.g., missing messages)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    ChatCompletionRequest:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+          description: List of messages in the conversation
+        model:
+          type: string
+          description: The Grok model to use (e.g., grok-2-latest)
+          example: "grok-2-latest"
+        stream:
+          type: boolean
+          description: Whether to stream the response
+          default: false
+        temperature:
+          type: number
+          format: float
+          description: Controls randomness (0 = deterministic, higher = more creative)
+          minimum: 0
+          maximum: 2
+          default: 0
+      required:
+        - messages
+        - model
+    Message:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: ["system", "user", "assistant"]
+          description: Role of the message sender
+        content:
+          type: string
+          description: The message content
+      required:
+        - role
+        - content
+    ChatCompletionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the completion
+          example: "9116ebda-e5d9-4885-b374-ea891b6b693c"
+        object:
+          type: string
+          description: Type of object returned
+          example: "chat.completion"
+        created:
+          type: integer
+          description: Unix timestamp of when the completion was created
+          example: 1739936964
+        model:
+          type: string
+          description: The model used for the completion
+          example: "grok-2-1212"
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/Choice'
+          description: List of response choices
+        usage:
+          $ref: '#/components/schemas/Usage'
+        system_fingerprint:
+          type: string
+          description: Unique identifier for the system configuration
+          example: "fp_c612364da3"
+      required:
+        - id
+        - object
+        - created
+        - model
+        - choices
+        - usage
+    Choice:
+      type: object
+      properties:
+        index:
+          type: integer
+          description: Index of the choice
+          example: 0
+        message:
+          $ref: '#/components/schemas/Message'
+        finish_reason:
+          type: string
+          enum: ["stop", "length", "error"]
+          description: Reason the completion stopped
+          example: "stop"
+      required:
+        - index
+        - message
+        - finish_reason
+    Usage:
+      type: object
+      properties:
+        prompt_tokens:
+          type: integer
+          description: Number of tokens in the prompt
+          example: 28
+        completion_tokens:
+          type: integer
+          description: Number of tokens in the completion
+          example: 5
+        total_tokens:
+          type: integer
+          description: Total number of tokens used
+          example: 33
+        prompt_tokens_details:
+          $ref: '#/components/schemas/PromptTokensDetails'
+      required:
+        - prompt_tokens
+        - completion_tokens
+        - total_tokens
+    PromptTokensDetails:
+      type: object
+      properties:
+        text_tokens:
+          type: integer
+          description: Number of text tokens in the prompt
+          example: 28
+        audio_tokens:
+          type: integer
+          description: Number of audio tokens (if applicable)
+          example: 0
+        image_tokens:
+          type: integer
+          description: Number of image tokens (if applicable)
+          example: 0
+        cached_tokens:
+          type: integer
+          description: Number of cached tokens (if applicable)
+          example: 0
+      required:
+        - text_tokens
+        - audio_tokens
+        - image_tokens
+        - cached_tokens
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+          example: "Invalid request: messages array is required"
+      required:
+        - error
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+security:
+  - ApiKeyAuth: []

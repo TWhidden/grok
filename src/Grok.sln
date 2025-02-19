@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrokSdk", "GrokSdk\GrokSdk.csproj", "{6512D691-8BE5-46AF-8D34-D701E6B3E6DA}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrokSdk.Tests", "GrokSdk.Tests\GrokSdk.Tests.csproj", "{DA062682-06E0-4C30-BB3D-AFAFF78B3B43}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6512D691-8BE5-46AF-8D34-D701E6B3E6DA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6512D691-8BE5-46AF-8D34-D701E6B3E6DA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6512D691-8BE5-46AF-8D34-D701E6B3E6DA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6512D691-8BE5-46AF-8D34-D701E6B3E6DA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DA062682-06E0-4C30-BB3D-AFAFF78B3B43}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA062682-06E0-4C30-BB3D-AFAFF78B3B43}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA062682-06E0-4C30-BB3D-AFAFF78B3B43}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA062682-06E0-4C30-BB3D-AFAFF78B3B43}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {FE5EE4C8-9CC7-4B84-A119-AD2928144994}
+	EndGlobalSection
+EndGlobal
