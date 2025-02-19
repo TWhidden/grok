@@ -9,6 +9,7 @@ An unofficial .NET library for interacting with Grok's API, generated using [NSw
 Install the library via NuGet by running the following command in your project directory:
 
 ```bash
+# Coming Soon!
 dotnet add package GrokDotNet
 ```
 
