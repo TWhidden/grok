@@ -11,8 +11,7 @@ An unofficial .NET library for interacting with Grok's API, generated using [NSw
 Install the library via NuGet by running the following command in your project directory:
 
 ```bash
-# Coming Soon!
-dotnet add package GrokDotNet
+dotnet add package GrokSdk
 ```
 
 Ensure you have the following dependencies in your project:
@@ -155,7 +154,7 @@ Console.WriteLine(response.Choices[0].Message.Content); // Outputs a roast for "
 ## Contributing
 
 We’d love your input! To contribute:
-- Report issues or suggest features on the [GitHub repository](https://github.com/twhidden/GrokDotNet).
+- Report issues or suggest features on the [GitHub repository](https://github.com/twhidden/grok).
 - Submit pull requests with enhancements or fixes.
 
 Please include tests (e.g., using MSTest as shown in `GrokClientTests`) to validate changes.
