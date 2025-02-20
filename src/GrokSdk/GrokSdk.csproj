@@ -1,15 +1,37 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFrameworks>net8.0;netstandard2.0</TargetFrameworks>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 		<LangVersion>latest</LangVersion>
+
+		<!-- NuGet Metadata -->
+		<NuspecFile>GrokSdk.nuspec</NuspecFile>
+		<PackageId>Grok</PackageId>
+		<Version>0.0.1-beta1</Version>
+		<Authors>TWhidden</Authors>
+		<Description>xAI Grok dotnet integration</Description>
+		<PackageTags>xAI;Grok;dotnet</PackageTags>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<RepositoryUrl>https://github.com/TWhidden/grok.git</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<AssemblyName>GrokSdk</AssemblyName>
+		<RootNamespace>GrokSdk</RootNamespace>
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
 	</PropertyGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	  <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All" />
 	</ItemGroup>
 
+	<!-- Only for netstandard2.0 -->
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
+	</ItemGroup>
+
+	
 
 </Project>
