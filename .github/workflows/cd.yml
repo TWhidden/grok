@@ -12,10 +12,14 @@ jobs:
       with:
         dotnet-version: '8.0' # Adjust to your .NET version
     - name: Restore dependencies
+      working-directory: ./src
       run: dotnet restore
     - name: Build
+      working-directory: ./src
       run: dotnet build --configuration Release --no-restore
     - name: Pack
+      working-directory: ./src
       run: dotnet pack --configuration Release --output artifacts
     - name: Push to NuGet
+      working-directory: ./src
       run: dotnet nuget push artifacts/*.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
