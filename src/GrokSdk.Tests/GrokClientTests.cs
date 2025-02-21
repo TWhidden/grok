@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
+using System.Text;
 
 namespace GrokSdk.Tests;
 
@@ -338,5 +339,73 @@ public class GrokClientTests
             "Response should mention something about the image, such as 'Eiffel', 'tower', or 'Paris'.");
         Assert.AreEqual(ChoiceFinish_reason.Stop, response.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
+    }
+
+    [TestMethod]
+    [TestCategory("Live")]
+    public async Task CreateChatCompletionAsync_LiveStreaming_ReturnsStreamedResponse()
+    {
+        // Arrange
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
+        var streamingClient = client.GetStreamingClient();
+
+        const int minWords = 10;
+        const int maxWords = 50;
+
+        var request = new ChatCompletionRequest
+        {
+            Messages = new Collection<Message>
+                {
+                    new SystemMessage { Content = "You are a helpful assistant." },
+                    new UserMessage { Content = $"Tell me a short story between {minWords} and {maxWords} words" }
+                },
+            Model = "grok-2-latest",
+            Stream = true, // Explicitly set for clarity, though StartStreamAsync will enforce this
+            Temperature = 0f
+        };
+
+        bool streamStarted = false;
+        bool chunkReceived = false;
+        bool streamCompleted = false;
+        var stateTransitions = new List<StreamState>();
+        var streamedContent = new StringBuilder();
+
+        streamingClient.OnStreamStarted += (s, e) => streamStarted = true;
+        streamingClient.OnChunkReceived += (s, chunk) =>
+        {
+            chunkReceived = true;
+            string? content = chunk.Choices[0].Delta.Content;
+            if (!string.IsNullOrEmpty(content))
+            {
+                streamedContent.Append(content);
+            }
+        };
+        streamingClient.OnStreamCompleted += (s, e) => streamCompleted = true;
+        streamingClient.OnStateChanged += (s, state) => stateTransitions.Add(state);
+        streamingClient.OnStreamError += (s, ex) => Assert.Fail($"Streaming failed: {ex.Message}");
+
+        // Act
+        await WaitForRateLimitAsync();
+        await streamingClient.StartStreamAsync(request);
+
+        // Assert
+        Assert.IsTrue(streamStarted, "Stream should have started.");
+        Assert.IsTrue(chunkReceived, "At least one chunk should have been received.");
+        Assert.IsTrue(streamCompleted, "Stream should have completed.");
+
+        // Verify state transitions
+        Assert.IsTrue(stateTransitions.Contains(StreamState.Thinking), "State should have transitioned to Thinking.");
+        Assert.IsTrue(stateTransitions.Contains(StreamState.Streaming), "State should have transitioned to Streaming.");
+        Assert.IsTrue(stateTransitions.Contains(StreamState.Done), "State should have transitioned to Done.");
+        Assert.IsFalse(stateTransitions.Contains(StreamState.Error), "State should not have transitioned to Error.");
+
+        // Verify streamed content
+        string finalContent = streamedContent.ToString().ToLower();
+        var words = finalContent.Split(' ');
+        Assert.IsTrue(words.Length >= minWords, $"Streamed words should be >= {minWords} words. we got {words.Length}");
+        Assert.IsTrue(words.Length <= maxWords, $"Streamed be <= {minWords} words. We got {words.Length}");
+        Assert.IsTrue(finalContent.Contains("story") || finalContent.Contains("once") || finalContent.Contains("end"),
+            "Streamed content should resemble a short story.");
     }
 }
