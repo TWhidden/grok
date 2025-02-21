@@ -73,8 +73,8 @@ public class GrokClientTests
         {
             Messages = new Collection<Message>
             {
-                new() { Role = MessageRole.System, Content = "You are a test assistant." },
-                new() { Role = MessageRole.User, Content = "Say hello world." }
+                new SystemMessage(){ Content = "You are a test assistant." },
+                new UserMessage(){ Content = "Say hello world." }
             },
             Model = "grok-2-latest",
             Stream = false,
@@ -118,16 +118,13 @@ public class GrokClientTests
 
         var messages = new List<Message>
         {
-            new Message
-            {
-                Role = MessageRole.System,
+            new SystemMessage(){
                 Content = "You are Grok, a helpful assistant. For this test conversation, please maintain context and respond deterministically to demonstrate your ability to remember details across multiple exchanges."
             }
         };
 
-        messages.Add(new Message
+        messages.Add(new UserMessage()
         {
-            Role = MessageRole.User,
             Content = "My name is TestUser. Please remember that."
         });
         var request1 = new ChatCompletionRequest
@@ -157,15 +154,13 @@ public class GrokClientTests
         Assert.AreEqual(ChoiceFinish_reason.Stop, response1.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
 
-        messages.Add(new Message
+        messages.Add(new AssistantMessage()
         {
-            Role = MessageRole.Assistant,
             Content = response1.Choices.First().Message.Content
         });
 
-        messages.Add(new Message
+        messages.Add(new UserMessage()
         {
-            Role = MessageRole.User,
             Content = "What is my name?"
         });
         var request2 = new ChatCompletionRequest
@@ -195,15 +190,13 @@ public class GrokClientTests
         Assert.AreEqual(ChoiceFinish_reason.Stop, response2.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
 
-        messages.Add(new Message
+        messages.Add(new AssistantMessage()
         {
-            Role = MessageRole.Assistant,
             Content = response2.Choices.First().Message.Content
         });
 
-        messages.Add(new Message
+        messages.Add(new UserMessage()
         {
-            Role = MessageRole.User,
             Content = "Good. Now, say 'Goodbye, TestUser!'"
         });
         var request3 = new ChatCompletionRequest
@@ -247,14 +240,12 @@ public class GrokClientTests
         {
             Messages = new Collection<Message>
             {
-                new Message
+                new SystemMessage()
                 {
-                    Role = MessageRole.System,
                     Content = "You are a bot that responds to commands. When given the command '/roast \"name\"', generate a funny and light-hearted roast for the provided name."
                 },
-                new Message
+                new UserMessage()
                 {
-                    Role = MessageRole.User,
                     Content = $"/roast \"{targetName}\""
                 }
             },
@@ -284,5 +275,68 @@ public class GrokClientTests
         Assert.IsTrue(isRoast, "Response should contain a roast-like message for the given name.");
 
         Assert.AreEqual(ChoiceFinish_reason.Stop, response.Choices.First().Finish_reason, "Finish reason should be 'stop'.");
+    }
+
+    [TestMethod]
+    [TestCategory("Live")]
+    public async Task CreateChatCompletionAsync_LiveImageAnalysis_ReturnsImageDescription()
+    {
+        // Arrange
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
+
+        // Define the image URL (publicly accessible Eiffel Tower image) and text prompt
+        string imageUrl = "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg";
+        string textPrompt = "What is in this image?";
+
+        // Create the content array with image_url and text parts
+        var contentParts = new List<object>
+    {
+        new { type = "image_url", image_url = new { url = imageUrl, detail = "high" } },
+        new { type = "text", text = textPrompt }
+    };
+
+        // Serialize the content array to a JSON string for UserMessage.Content
+        string contentJson = Newtonsoft.Json.JsonConvert.SerializeObject(contentParts);
+
+        // Create the request with SystemMessage and UserMessage
+        var request = new ChatCompletionRequest
+        {
+            Messages = new Collection<Message>
+        {
+            new SystemMessage { Content = "You are Grok, a helpful assistant capable of analyzing images." },
+            new UserMessage { Content = contentJson }
+        },
+            Model = "grok-2-vision-latest", // Model that supports image analysis
+            Stream = false,
+            Temperature = 0f
+        };
+
+        // Act
+        await WaitForRateLimitAsync();
+        ChatCompletionResponse? response = null;
+        try
+        {
+            response = await client.CreateChatCompletionAsync(request);
+        }
+        catch (ApiException ex)
+        {
+            Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+        }
+
+        // Assert
+        Assert.IsNotNull(response, "Response should not be null.");
+        Assert.IsNotNull(response.Id, "Response ID should not be null.");
+        Assert.AreEqual("chat.completion", response.Object, "Response object type should be 'chat.completion'.");
+        Assert.IsTrue(response.Choices.Count > 0, "Response should have at least one choice.");
+
+        string assistantResponse = response.Choices.First().Message.Content.ToLower();
+        bool mentionsImage = assistantResponse.Contains("eiffel") ||
+                            assistantResponse.Contains("tower") ||
+                            assistantResponse.Contains("paris");
+        Assert.IsTrue(mentionsImage,
+            "Response should mention something about the image, such as 'Eiffel', 'tower', or 'Paris'.");
+        Assert.AreEqual(ChoiceFinish_reason.Stop, response.Choices.First().Finish_reason,
+            "Finish reason should be 'stop'.");
     }
 }

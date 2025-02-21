@@ -24,6 +24,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ChatCompletionResponse'
+            text/event-stream:
+              schema:
+                type: string
+                description: |
+                  Server-Sent Events stream of chat completion chunks when "stream" is true.
+                  Each event is prefixed with "data: " followed by a JSON object like:
+                  {"id": "<id>", "object": "chat.completion.chunk", "created": <time>,
+                  "model": "<model>", "choices": [{"index": 0, "delta": {"content": "<text>", "role": "assistant"}}],
+                  "usage": {...}, "system_fingerprint": "<fingerprint>"}
+                  Ends with "data: [DONE]".
         '400':
           description: Invalid request (e.g., missing messages)
           content:
@@ -46,7 +56,7 @@ components:
           example: "grok-2-latest"
         stream:
           type: boolean
-          description: Whether to stream the response
+          description: Whether to stream the response as Server-Sent Events
           default: false
         temperature:
           type: number
@@ -55,22 +65,212 @@ components:
           minimum: 0
           maximum: 2
           default: 0
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tool'
+          description: List of tools (functions) available to the model
+        tool_choice:
+          oneOf:
+            - type: string
+              enum: ["auto", "required", "none"]
+            - type: object
+              properties:
+                type:
+                  type: string
+                  enum: ["function"]
+                function:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+              required:
+                - type
+                - function
+            - type: 'null'
+          default: null
+          description: |
+            Controls tool usage. Set to null or omit when no tools are provided.
+            - "auto": model decides whether to use tools
+            - "required": force tool call
+            - "none": disable tool usage
+            - object: specify a particular function
       required:
         - messages
         - model
+
     Message:
       type: object
       properties:
         role:
           type: string
-          enum: ["system", "user", "assistant"]
-          description: Role of the message sender
-        content:
-          type: string
-          description: The message content
+          enum: ["system", "user", "assistant", "tool"]
       required:
         - role
-        - content
+      discriminator:
+        propertyName: role
+        mapping:
+          system: '#/components/schemas/SystemMessage'
+          user: '#/components/schemas/UserMessage'
+          assistant: '#/components/schemas/AssistantMessage'
+          tool: '#/components/schemas/ToolMessage'
+
+    SystemMessage:
+      allOf:
+        - $ref: '#/components/schemas/Message'
+        - type: object
+          properties:
+            content:
+              type: string
+              description: The system message content
+          required:
+            - content
+
+    UserMessage:
+      allOf:
+        - $ref: '#/components/schemas/Message'
+        - type: object
+          properties:
+            content:
+              oneOf:
+                - type: string
+                  description: Text-only content
+                - type: array
+                  items:
+                    $ref: '#/components/schemas/ContentPart'
+                  description: Mixed text and image content
+          required:
+            - content
+
+    AssistantMessage:
+      allOf:
+        - $ref: '#/components/schemas/Message'
+        - type: object
+          properties:
+            content:
+              type: string
+              description: The assistant's response text; may be a JSON string for structured outputs with certain models
+            tool_calls:
+              type: array
+              items:
+                $ref: '#/components/schemas/ToolCall'
+              description: List of tool calls requested by the assistant
+
+    ToolMessage:
+      allOf:
+        - $ref: '#/components/schemas/Message'
+        - type: object
+          properties:
+            content:
+              type: string
+              description: JSON string of the tool function’s result
+            tool_call_id:
+              type: string
+              description: ID of the tool call this result corresponds to
+          required:
+            - content
+            - tool_call_id
+
+    ContentPart:
+      oneOf:
+        - $ref: '#/components/schemas/TextPart'
+        - $ref: '#/components/schemas/ImageUrlPart'
+      discriminator:
+        propertyName: type
+        mapping:
+          text: '#/components/schemas/TextPart'
+          image_url: '#/components/schemas/ImageUrlPart'
+
+    TextPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["text"]
+        text:
+          type: string
+          description: Text content
+      required:
+        - type
+        - text
+
+    ImageUrlPart:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["image_url"]
+        image_url:
+          type: object
+          properties:
+            url:
+              type: string
+              description: URL or base64-encoded image (e.g., "data:image/jpeg;base64,<data>")
+            detail:
+              type: string
+              enum: ["low", "high"]
+              description: Image detail level
+          required:
+            - url
+      required:
+        - type
+        - image_url
+
+    Tool:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["function"]
+        function:
+          $ref: '#/components/schemas/FunctionDefinition'
+      required:
+        - type
+        - function
+
+    FunctionDefinition:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Name of the function
+        description:
+          type: string
+          description: Function description
+        parameters:
+          type: object
+          additionalProperties: true
+          description: JSON schema for function parameters
+      required:
+        - name
+        - parameters
+
+    ToolCall:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the tool call
+        type:
+          type: string
+          enum: ["function"]
+        function:
+          type: object
+          properties:
+            name:
+              type: string
+              description: Function name
+            arguments:
+              type: string
+              description: JSON string of function arguments
+          required:
+            - name
+            - arguments
+      required:
+        - id
+        - type
+        - function
+
     ChatCompletionResponse:
       type: object
       properties:
@@ -108,6 +308,7 @@ components:
         - model
         - choices
         - usage
+
     Choice:
       type: object
       properties:
@@ -116,16 +317,17 @@ components:
           description: Index of the choice
           example: 0
         message:
-          $ref: '#/components/schemas/Message'
+          $ref: '#/components/schemas/AssistantMessage'
         finish_reason:
           type: string
-          enum: ["stop", "length", "error"]
+          enum: ["stop", "length", "error", "tool_calls"]
           description: Reason the completion stopped
           example: "stop"
       required:
         - index
         - message
         - finish_reason
+
     Usage:
       type: object
       properties:
@@ -147,6 +349,7 @@ components:
         - prompt_tokens
         - completion_tokens
         - total_tokens
+
     PromptTokensDetails:
       type: object
       properties:
@@ -171,6 +374,7 @@ components:
         - audio_tokens
         - image_tokens
         - cached_tokens
+
     ErrorResponse:
       type: object
       properties:
@@ -180,6 +384,7 @@ components:
           example: "Invalid request: messages array is required"
       required:
         - error
+
   securitySchemes:
     ApiKeyAuth:
       type: apiKey
