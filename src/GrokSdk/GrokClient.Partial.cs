@@ -1,10 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
-using System.Net.Http.Headers;
+﻿using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace GrokSdk
@@ -146,7 +141,7 @@ namespace GrokSdk
     // Enum to represent stream states
     public enum StreamState
     {
-        None,
+        None,      // Initial State
         Thinking,  // Before streaming starts (e.g., API is processing)
         Streaming, // Actively receiving chunks
         Done,      // Stream has completed successfully

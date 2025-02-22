@@ -1,7 +1,9 @@
+using Newtonsoft.Json;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+using GrokSdk.Tests.Helpers;
 
 namespace GrokSdk.Tests;
 
@@ -26,7 +28,8 @@ public class GrokClientTests
             return Environment.GetEnvironmentVariable("GROK_API_KEY")!;
         }
 
-        string outputDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? throw new Exception("Failed to get assembly location");
+        string outputDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ??
+                                 throw new Exception("Failed to get assembly location");
         string filePath = Path.Combine(outputDirectory, "apikey.txt");
 
         if (!File.Exists(filePath))
@@ -43,6 +46,31 @@ public class GrokClientTests
         return apiKey;
     }
 
+    private static string GetN2yoApiKeyFromFileOrEnv()
+    {
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("N2YO_API_KEY")))
+        {
+            return Environment.GetEnvironmentVariable("N2YO_API_KEY")!;
+        }
+
+        string outputDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ??
+                                 throw new Exception("Failed to get assembly location");
+        string filePath = Path.Combine(outputDirectory, "n2yokey.txt");
+
+        if (!File.Exists(filePath))
+        {
+            throw new FileNotFoundException("API key file 'n2yokey.txt' not found in the test output directory.");
+        }
+
+        string apiKey = File.ReadAllText(filePath).Trim();
+        if (string.IsNullOrEmpty(apiKey))
+        {
+            throw new InvalidOperationException("API key file 'n2yokey.txt' is empty.");
+        }
+
+        return apiKey;
+    }
+
     private static async Task WaitForRateLimitAsync()
     {
         double currentElapsed = Stopwatch.Elapsed.TotalSeconds;
@@ -51,12 +79,14 @@ public class GrokClientTests
         {
             timeSinceLastCall = currentElapsed - _lastCallElapsedSeconds;
         }
+
         if (timeSinceLastCall < 1)
         {
             double delaySeconds = 1 - timeSinceLastCall;
             await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
             currentElapsed = Stopwatch.Elapsed.TotalSeconds;
         }
+
         lock (Lock)
         {
             _lastCallElapsedSeconds = currentElapsed;
@@ -74,8 +104,8 @@ public class GrokClientTests
         {
             Messages = new Collection<Message>
             {
-                new SystemMessage(){ Content = "You are a test assistant." },
-                new UserMessage(){ Content = "Say hello world." }
+                new SystemMessage() { Content = "You are a test assistant." },
+                new UserMessage() { Content = "Say hello world." }
             },
             Model = "grok-2-latest",
             Stream = false,
@@ -88,7 +118,7 @@ public class GrokClientTests
         {
             response = await client.CreateChatCompletionAsync(request);
         }
-        catch (ApiException ex)
+        catch (GrokSdkException ex)
         {
             Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
         }
@@ -119,8 +149,10 @@ public class GrokClientTests
 
         var messages = new List<Message>
         {
-            new SystemMessage(){
-                Content = "You are Grok, a helpful assistant. For this test conversation, please maintain context and respond deterministically to demonstrate your ability to remember details across multiple exchanges."
+            new SystemMessage()
+            {
+                Content =
+                    "You are Grok, a helpful assistant. For this test conversation, please maintain context and respond deterministically to demonstrate your ability to remember details across multiple exchanges."
             }
         };
 
@@ -142,7 +174,7 @@ public class GrokClientTests
         {
             response1 = await client.CreateChatCompletionAsync(request1);
         }
-        catch (ApiException ex)
+        catch (GrokSdkException ex)
         {
             Assert.Fail($"First API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
         }
@@ -178,7 +210,7 @@ public class GrokClientTests
         {
             response2 = await client.CreateChatCompletionAsync(request2);
         }
-        catch (ApiException ex)
+        catch (GrokSdkException ex)
         {
             Assert.Fail($"Second API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
         }
@@ -214,7 +246,7 @@ public class GrokClientTests
         {
             response3 = await client.CreateChatCompletionAsync(request3);
         }
-        catch (ApiException ex)
+        catch (GrokSdkException ex)
         {
             Assert.Fail($"Third API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
         }
@@ -243,7 +275,8 @@ public class GrokClientTests
             {
                 new SystemMessage()
                 {
-                    Content = "You are a bot that responds to commands. When given the command '/roast \"name\"', generate a funny and light-hearted roast for the provided name."
+                    Content =
+                        "You are a bot that responds to commands. When given the command '/roast \"name\"', generate a funny and light-hearted roast for the provided name."
                 },
                 new UserMessage()
                 {
@@ -261,7 +294,7 @@ public class GrokClientTests
         {
             response = await client.CreateChatCompletionAsync(request);
         }
-        catch (ApiException ex)
+        catch (GrokSdkException ex)
         {
             Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
         }
@@ -272,10 +305,12 @@ public class GrokClientTests
         Assert.IsTrue(response.Choices.Count > 0, "Response should have at least one choice.");
 
         string assistantResponse = response.Choices.First().Message.Content.ToLower();
-        bool isRoast = assistantResponse.Contains("roast") || assistantResponse.Contains("funny") || assistantResponse.Contains(targetName.ToLower());
+        bool isRoast = assistantResponse.Contains("roast") || assistantResponse.Contains("funny") ||
+                       assistantResponse.Contains(targetName.ToLower());
         Assert.IsTrue(isRoast, "Response should contain a roast-like message for the given name.");
 
-        Assert.AreEqual(ChoiceFinish_reason.Stop, response.Choices.First().Finish_reason, "Finish reason should be 'stop'.");
+        Assert.AreEqual(ChoiceFinish_reason.Stop, response.Choices.First().Finish_reason,
+            "Finish reason should be 'stop'.");
     }
 
     [TestMethod]
@@ -292,10 +327,10 @@ public class GrokClientTests
 
         // Create the content array with image_url and text parts
         var contentParts = new List<object>
-    {
-        new { type = "image_url", image_url = new { url = imageUrl, detail = "high" } },
-        new { type = "text", text = textPrompt }
-    };
+        {
+            new { type = "image_url", image_url = new { url = imageUrl, detail = "high" } },
+            new { type = "text", text = textPrompt }
+        };
 
         // Serialize the content array to a JSON string for UserMessage.Content
         string contentJson = Newtonsoft.Json.JsonConvert.SerializeObject(contentParts);
@@ -304,10 +339,10 @@ public class GrokClientTests
         var request = new ChatCompletionRequest
         {
             Messages = new Collection<Message>
-        {
-            new SystemMessage { Content = "You are Grok, a helpful assistant capable of analyzing images." },
-            new UserMessage { Content = contentJson }
-        },
+            {
+                new SystemMessage { Content = "You are Grok, a helpful assistant capable of analyzing images." },
+                new UserMessage { Content = contentJson }
+            },
             Model = "grok-2-vision-latest", // Model that supports image analysis
             Stream = false,
             Temperature = 0f
@@ -320,7 +355,7 @@ public class GrokClientTests
         {
             response = await client.CreateChatCompletionAsync(request);
         }
-        catch (ApiException ex)
+        catch (GrokSdkException ex)
         {
             Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
         }
@@ -333,8 +368,8 @@ public class GrokClientTests
 
         string assistantResponse = response.Choices.First().Message.Content.ToLower();
         bool mentionsImage = assistantResponse.Contains("eiffel") ||
-                            assistantResponse.Contains("tower") ||
-                            assistantResponse.Contains("paris");
+                             assistantResponse.Contains("tower") ||
+                             assistantResponse.Contains("paris");
         Assert.IsTrue(mentionsImage,
             "Response should mention something about the image, such as 'Eiffel', 'tower', or 'Paris'.");
         Assert.AreEqual(ChoiceFinish_reason.Stop, response.Choices.First().Finish_reason,
@@ -356,10 +391,10 @@ public class GrokClientTests
         var request = new ChatCompletionRequest
         {
             Messages = new Collection<Message>
-                {
-                    new SystemMessage { Content = "You are a helpful assistant." },
-                    new UserMessage { Content = $"Tell me a short story between {minWords} and {maxWords} words" }
-                },
+            {
+                new SystemMessage { Content = "You are a helpful assistant." },
+                new UserMessage { Content = $"Tell me a short story between {minWords} and {maxWords} words" }
+            },
             Model = "grok-2-latest",
             Stream = true, // Explicitly set for clarity, though StartStreamAsync will enforce this
             Temperature = 0f
@@ -408,4 +443,559 @@ public class GrokClientTests
         Assert.IsTrue(finalContent.Contains("story") || finalContent.Contains("once") || finalContent.Contains("end"),
             "Streamed content should resemble a short story.");
     }
+
+    [TestMethod]
+    [TestCategory("Live")]
+    public async Task CreateChatCompletionAsync_LiveToolChoice_DemonstratesModes()
+    {
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
+
+        // Define tools similar to the Grok docs example
+        var tools = new Collection<Tool>
+        {
+            new Tool
+            {
+                Type = ToolType.Function,
+                Function = new FunctionDefinition
+                {
+                    Name = "get_current_temperature",
+                    Description = "Get the current temperature in a given location",
+                    Parameters = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            location = new
+                                { type = "string", description = "The city and state, e.g. San Francisco, CA" },
+                            unit = new { type = "string", @enum = new[] { "celsius", "fahrenheit" } }
+                        },
+                        required = new[] { "location" }
+                    }
+                }
+            }
+        };
+
+        // Test 1: tool_choice = "auto" - Model decides whether to use the tool
+        var requestAuto = new ChatCompletionRequest
+        {
+            Messages = new Collection<Message>
+            {
+                new SystemMessage { Content = "You are a weather assistant with access to tools." },
+                new UserMessage { Content = "What's the temperature in Paris?" }
+            },
+            Model = "grok-2-latest",
+            Stream = false,
+            Temperature = 0f,
+            Tools = tools,
+            Tool_choice = Tool_choice.Auto
+        };
+
+        await WaitForRateLimitAsync();
+        ChatCompletionResponse? responseAuto = null;
+        try
+        {
+            responseAuto = await client.CreateChatCompletionAsync(requestAuto);
+        }
+        catch (GrokSdkException ex)
+        {
+            Assert.Fail($"API call (auto) failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+        }
+
+        Assert.IsNotNull(responseAuto, "Response (auto) should not be null.");
+        Assert.IsTrue(responseAuto.Choices.Count > 0, "Response (auto) should have at least one choice.");
+        var autoChoice = responseAuto.Choices.First();
+        bool toolCalledAuto = autoChoice.Message.Tool_calls?.Count > 0;
+        bool contentProvidedAuto = !string.IsNullOrEmpty(autoChoice.Message.Content);
+        Assert.IsTrue(toolCalledAuto || contentProvidedAuto,
+            "Response (auto) should either call a tool or provide content.");
+        if (toolCalledAuto)
+        {
+            Assert.AreEqual("get_current_temperature", autoChoice.Message.Tool_calls.First().Function.Name,
+                "Tool call (auto) should match the defined tool.");
+            Assert.AreEqual(ChoiceFinish_reason.Tool_calls, autoChoice.Finish_reason,
+                "Finish reason (auto) should be 'tool_calls' when a tool is used.");
+        }
+        else
+        {
+            Assert.AreEqual(ChoiceFinish_reason.Stop, autoChoice.Finish_reason,
+                "Finish reason (auto) should be 'stop' when content is provided.");
+        }
+
+        // Test 2: tool_choice = "none" - No tool should be called
+        var requestNone = new ChatCompletionRequest
+        {
+            Messages = new Collection<Message>
+            {
+                new SystemMessage { Content = "You are a weather assistant with access to tools." },
+                new UserMessage { Content = "What's the temperature in Paris?" }
+            },
+            Model = "grok-2-latest",
+            Stream = false,
+            Temperature = 0f,
+            Tools = tools,
+            Tool_choice = Tool_choice.None
+        };
+
+        await WaitForRateLimitAsync();
+        ChatCompletionResponse? responseNone = null;
+        try
+        {
+            responseNone = await client.CreateChatCompletionAsync(requestNone);
+        }
+        catch (GrokSdkException ex)
+        {
+            Assert.Fail($"API call (none) failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+        }
+
+        Assert.IsNotNull(responseNone, "Response (none) should not be null.");
+        Assert.IsTrue(responseNone.Choices.Count > 0, "Response (none) should have at least one choice.");
+        var noneChoice = responseNone.Choices.First();
+        Assert.IsNull(noneChoice.Message.Tool_calls, "No tools should be called with tool_choice 'none'.");
+        Assert.IsFalse(string.IsNullOrEmpty(noneChoice.Message.Content),
+            "Response (none) should provide content since tools are disabled.");
+        Assert.AreEqual(ChoiceFinish_reason.Stop, noneChoice.Finish_reason,
+            "Finish reason (none) should be 'stop'.");
+
+        // Test 3: tool_choice = "required" - Forces a tool call
+        var requestRequired = new ChatCompletionRequest
+        {
+            Messages = new Collection<Message>
+            {
+                new SystemMessage { Content = "You are a weather assistant with access to tools." },
+                new UserMessage { Content = "What's the temperature in Paris?" }
+            },
+            Model = "grok-2-latest",
+            Stream = false,
+            Temperature = 0f,
+            Tools = tools,
+            Tool_choice = Tool_choice.Required
+        };
+
+        await WaitForRateLimitAsync();
+        ChatCompletionResponse? responseRequired = null;
+        try
+        {
+            responseRequired = await client.CreateChatCompletionAsync(requestRequired);
+        }
+        catch (GrokSdkException ex)
+        {
+            Assert.Fail(
+                $"API call (required) failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+        }
+
+        Assert.IsNotNull(responseRequired, "Response (required) should not be null.");
+        Assert.IsTrue(responseRequired.Choices.Count > 0, "Response (required) should have at least one choice.");
+        var requiredChoice = responseRequired.Choices.First();
+        Assert.IsTrue(requiredChoice.Message.Tool_calls?.Count > 0,
+            "Response (required) should call a tool since tool_choice is 'required'.");
+        Assert.AreEqual("get_current_temperature", requiredChoice.Message.Tool_calls.First().Function.Name,
+            "Tool call (required) should match the defined tool.");
+        Assert.AreEqual(ChoiceFinish_reason.Tool_calls, requiredChoice.Finish_reason,
+            "Finish reason (required) should be 'tool_calls'.");
+    }
+
+    [TestMethod]
+    [TestCategory("Live")]
+    public async Task CreateChatCompletionAsync_LiveToolChoice_ReturnsParisTemperature()
+    {
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
+
+        // Define the tool
+        var tools = new Collection<Tool>
+        {
+            new Tool
+            {
+                Type = ToolType.Function,
+                Function = new FunctionDefinition
+                {
+                    Name = "get_current_temperature",
+                    Description = "Get the current temperature in a given location",
+                    Parameters = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            location = new { type = "string", description = "The city and state" },
+                            unit = new
+                            {
+                                type = "string", @enum = new[] { "celsius", "fahrenheit" }, @default = "celsius"
+                            }
+                        },
+                        required = new[] { "location" }
+                    }
+                }
+            }
+        };
+
+        // Step 1: Initial request
+        var messages = new Collection<Message>
+        {
+            new SystemMessage { Content = "You are a weather assistant with access to tools." },
+            new UserMessage { Content = "What's the temperature in Paris?" }
+        };
+        var request = new ChatCompletionRequest
+        {
+            Messages = messages,
+            Model = "grok-2-latest",
+            Stream = false,
+            Temperature = 0f,
+            Tools = tools,
+            Tool_choice = Tool_choice.Auto
+        };
+
+        await WaitForRateLimitAsync();
+        ChatCompletionResponse? response = null;
+        try
+        {
+            response = await client.CreateChatCompletionAsync(request);
+        }
+        catch (GrokSdkException ex)
+        {
+            Assert.Fail($"Initial API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+        }
+
+        Assert.IsNotNull(response, "Initial response should not be null.");
+        Assert.IsTrue(response.Choices.Count > 0, "Initial response should have at least one choice.");
+
+        var choice = response.Choices.First();
+        if (choice.Message.Tool_calls?.Count > 0)
+        {
+            // Step 2: Simulate tool execution (mock or real API call)
+            var toolCall = choice.Message.Tool_calls.First();
+            Assert.AreEqual("get_current_temperature", toolCall.Function.Name,
+                "Tool should be get_current_temperature.");
+
+            var args =
+                Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(toolCall.Function.Arguments);
+            string location = args["location"];
+            Assert.AreEqual("Paris", location, "Tool call should target Paris.");
+
+            // Mock implementation (replace with real API call if desired)
+            string result = location == "Paris"
+                ? "{\"location\": \"Paris\", \"temperature\": 15, \"unit\": \"celsius\"}"
+                : "{\"location\": \"unknown\", \"temperature\": null, \"unit\": \"celsius\"}";
+
+            // Add assistant message and tool result to messages
+            messages.Add(choice.Message);
+            messages.Add(new ToolMessage
+            {
+                Content = result,
+                Tool_call_id = toolCall.Id
+            });
+
+            // Step 3: Send back to Grok
+            var followUpRequest = new ChatCompletionRequest
+            {
+                Messages = messages,
+                Model = "grok-2-latest",
+                Stream = false,
+                Temperature = 0f,
+                Tools = tools,
+                Tool_choice = Tool_choice.Auto
+            };
+
+            await WaitForRateLimitAsync();
+            ChatCompletionResponse? finalResponse = null;
+            try
+            {
+                finalResponse = await client.CreateChatCompletionAsync(followUpRequest);
+            }
+            catch (GrokSdkException ex)
+            {
+                Assert.Fail(
+                    $"Follow-up API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+            }
+
+            Assert.IsNotNull(finalResponse, "Final response should not be null.");
+            Assert.IsTrue(finalResponse.Choices.Count > 0, "Final response should have at least one choice.");
+            var finalChoice = finalResponse.Choices.First();
+            Assert.IsFalse(string.IsNullOrEmpty(finalChoice.Message.Content), "Final response should have content.");
+            Assert.IsTrue(finalChoice.Message.Content.Contains("15") || finalChoice.Message.Content.Contains("Paris"),
+                "Final response should mention Paris temperature (15°C).");
+            Assert.AreEqual(ChoiceFinish_reason.Stop, finalChoice.Finish_reason,
+                "Final finish reason should be 'stop'.");
+        }
+    }
+
+    [TestMethod]
+    [TestCategory("Live")]
+    public async Task CreateChatCompletionAsync_LiveToolChoice_FetchesInternationalSpaceStation()
+    {
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
+
+        // Define a tool to get satellite position
+        var tools = new Collection<Tool>
+        {
+            new Tool
+            {
+                Type = ToolType.Function,
+                Function = new FunctionDefinition
+                {
+                    Name = "get_starlink_position",
+                    Description = "Get the current position of a satellite by NORAD ID",
+                    Parameters = new
+                    {
+                        type = "object",
+                        properties = new
+                        {
+                            norad_id = new { type = "integer", description = "The NORAD ID of the satellite" }
+                        },
+                        required = new[] { "norad_id" }
+                    }
+                }
+            }
+        };
+
+        // Step 1: Initial request to Grok
+        var messages = new Collection<Message>
+        {
+            new SystemMessage { Content = "You are an assistant that can track satellites." },
+            new UserMessage { Content = "Where is the International Space Station (NORAD ID 25544) right now?" }
+        };
+        var request = new ChatCompletionRequest
+        {
+            Messages = messages,
+            Model = "grok-2-latest",
+            Stream = false,
+            Temperature = 0f,
+            Tools = tools,
+            Tool_choice = Tool_choice.Auto
+        };
+
+        await WaitForRateLimitAsync();
+        ChatCompletionResponse? response = null;
+        try
+        {
+            response = await client.CreateChatCompletionAsync(request);
+        }
+        catch (GrokSdkException ex)
+        {
+            Assert.Fail($"Initial API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+        }
+
+        Assert.IsNotNull(response, "Initial response should not be null.");
+        Assert.IsTrue(response.Choices.Count > 0, "Initial response should have at least one choice.");
+
+        var choice = response.Choices.First();
+        if (choice.Message.Tool_calls?.Count > 0)
+        {
+            var toolCall = choice.Message.Tool_calls.First();
+            Assert.AreEqual("get_starlink_position", toolCall.Function.Name, "Tool should be get_starlink_position.");
+
+            var args =
+                Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, int>>(toolCall.Function.Arguments);
+            int noradId = args["norad_id"];
+            Assert.AreEqual(25544, noradId, "Tool call should target NORAD ID 25544.");
+
+            // Step 2: Hit the real N2YO API
+            string apiKey = GetN2yoApiKeyFromFileOrEnv();
+            string url =
+                $"https://api.n2yo.com/rest/v1/satellite/positions/{noradId}/48.8566/2.3522/0/1/&apiKey={apiKey}";
+            string result;
+            try
+            {
+                var n2yoResponse = await httpClient.GetAsync(url);
+                n2yoResponse.EnsureSuccessStatusCode();
+                string json = await n2yoResponse.Content.ReadAsStringAsync();
+                dynamic data = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+
+                // Verify response structure
+                Assert.IsNotNull(data.info, "N2YO response should contain 'info'.");
+                Assert.IsNotNull(data.positions, "N2YO response should contain 'positions'.");
+                Assert.IsTrue(((Newtonsoft.Json.Linq.JArray)data.positions).Count > 0,
+                    "N2YO 'positions' should have at least one entry.");
+
+                var position = data.positions[0];
+                Assert.IsNotNull(position.satlatitude, "Position should include 'satlatitude'.");
+                Assert.IsNotNull(position.satlongitude, "Position should include 'satlongitude'.");
+                Assert.IsNotNull(position.sataltitude, "Position should include 'sataltitude'.");
+
+                // Handle optional timestamp
+                long? timestamp = data.info.timestamp != null ? (long?)data.info.timestamp : null;
+
+                result = Newtonsoft.Json.JsonConvert.SerializeObject(new
+                {
+                    norad_id = noradId,
+                    latitude = (double)position.satlatitude,
+                    longitude = (double)position.satlongitude,
+                    altitude = (double)position.sataltitude,
+                    timestamp
+                });
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"N2YO API failed: Status {ex.StatusCode} - {ex.Message}");
+                result =
+                    "{\"norad_id\": 25544, \"latitude\": 51.0, \"longitude\": -0.1, \"altitude\": 420, \"timestamp\": 1739999999}";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unexpected error calling N2YO API: {ex.Message}");
+                result =
+                    "{\"norad_id\": 25544, \"latitude\": 51.0, \"longitude\": -0.1, \"altitude\": 420, \"timestamp\": 1739999999}";
+            }
+
+            // Add assistant message and tool result
+            messages.Add(choice.Message);
+            messages.Add(new ToolMessage
+            {
+                Content = result,
+                Tool_call_id = toolCall.Id
+            });
+
+            // Step 3: Send back to Grok
+            var followUpRequest = new ChatCompletionRequest
+            {
+                Messages = messages,
+                Model = "grok-2-latest",
+                Stream = false,
+                Temperature = 0f,
+                Tools = tools,
+                Tool_choice = Tool_choice.Auto
+            };
+
+            await WaitForRateLimitAsync();
+            ChatCompletionResponse? finalResponse = null;
+            try
+            {
+                finalResponse = await client.CreateChatCompletionAsync(followUpRequest);
+            }
+            catch (GrokSdkException ex)
+            {
+                Assert.Fail(
+                    $"Follow-up API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+            }
+
+            Assert.IsNotNull(finalResponse, "Final response should not be null.");
+            Assert.IsTrue(finalResponse.Choices.Count > 0, "Final response should have at least one choice.");
+            var finalChoice = finalResponse.Choices.First();
+            Assert.IsFalse(string.IsNullOrEmpty(finalChoice.Message.Content), "Final response should have content.");
+            Assert.IsTrue(
+                finalChoice.Message.Content.Contains("25544") || finalChoice.Message.Content.Contains("latitude") ||
+                finalChoice.Message.Content.Contains("longitude"),
+                "Final response should mention ISS (25544) position.");
+            Assert.AreEqual(ChoiceFinish_reason.Stop, finalChoice.Finish_reason,
+                "Final finish reason should be 'stop'.");
+        }
+        else
+        {
+            Assert.Inconclusive("Grok did not request a tool call with 'auto'; cannot test external API integration.");
+        }
+    }
+
+    [TestMethod]
+    [TestCategory("Live")]
+    public async Task CreateChatCompletionAsync_LiveToolChoice_AskStarlinkSatelliteCount()
+    {
+        try
+        {
+            var httpClient = new HttpClient();
+            var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
+
+            var messages = new Collection<Message>
+            {
+                new SystemMessage { Content = "You are an assistant with access to satellite data tools." },
+                new UserMessage { Content = "How many Starlink satellites are out there? Category Code 52" }
+            };
+
+            // Define a tool to count Starlink satellites
+            var tools = new Collection<Tool>
+            {
+                new Tool
+                {
+                    Type = ToolType.Function,
+                    Function = new FunctionDefinition
+                    {
+                        Name = "get_satellite_data",
+                        Description = "Get the satellite data from n2yo website using the category code",
+                        Parameters = new
+                        {
+                            type = "object",
+                            properties = new
+                            {
+                                categoryCode = new
+                                {
+                                    type = "number",
+                                    description =
+                                        "The Category Code for n2yo website for a specific company (such as Starlink 52)"
+                                }
+                            },
+                            required = new[] { "categoryCode" }
+                        }
+                    }
+                }
+            };
+
+            // Step 1: Initial request to Grok
+            var request = new ChatCompletionRequest
+            {
+                Messages = messages,
+                Model = "grok-2-latest",
+                Stream = false,
+                Temperature = 0f,
+                Tools = tools,
+                Tool_choice = Tool_choice.Auto // Let Grok decide to use the tool
+            };
+
+            var response = await client.CreateChatCompletionAsync(request);
+            var choice = response.Choices.First();
+
+            const int maxDataSetToGrok = 100;
+
+            if (choice.Message.Tool_calls?.Count > 0)
+            {
+                var toolCall = choice.Message.Tool_calls.First();
+                if (toolCall.Function.Name == "get_satellite_data")
+                {
+                    // Step 2: Call N2YO API to get Starlink satellite count
+                    var args = JsonConvert.DeserializeObject<Dictionary<string, int>>(toolCall.Function.Arguments);
+                    var categoryCode = args["categoryCode"];
+
+                    var data = await SatelliteHelper.GetSatellitesAsync(categoryCode);
+
+                    // Due to limits on the input of Grok (2 atm, we will limit the input to 100)
+                    var reducedData = data.Take(maxDataSetToGrok);
+
+                    var result = JsonConvert.SerializeObject(reducedData);
+
+                    // Add assistant message and tool result
+                    messages.Add(choice.Message);
+                    messages.Add(new ToolMessage
+                    {
+                        Content = result,
+                        Tool_call_id = toolCall.Id
+                    });
+                    
+                    // Step 3: Send back to Grok
+                    var followUpRequest = new ChatCompletionRequest
+                    {
+                        Messages = messages,
+                        Model = "grok-2-latest",
+                        Stream = false,
+                        Temperature = 0f,
+                        Tools = tools,
+                        Tool_choice = Tool_choice.Auto
+                    };
+
+                    var finalResponse = await client.CreateChatCompletionAsync(followUpRequest);
+                    Console.WriteLine(finalResponse.Choices.First().Message.Content); 
+                    Assert.IsTrue(finalResponse.Choices.First().Message.Content.Contains($"{maxDataSetToGrok}"), $"Expected {maxDataSetToGrok}");
+                }
+            }
+            else
+            {
+                Assert.Fail("The Tool was not called like it should have been!");
+            }
+        }
+        catch (Exception ex)
+        {
+            throw;
+        }
+    }
+
+
+
 }

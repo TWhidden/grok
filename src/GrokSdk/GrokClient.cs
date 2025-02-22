@@ -74,7 +74,7 @@ namespace GrokSdk
         /// Create a chat completion with Grok
         /// </summary>
         /// <returns>Successful chat completion response</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
+        /// <exception cref="GrokSdkException">A server side error occurred.</exception>
         public virtual System.Threading.Tasks.Task<ChatCompletionResponse> CreateChatCompletionAsync(ChatCompletionRequest body)
         {
             return CreateChatCompletionAsync(body, System.Threading.CancellationToken.None);
@@ -85,7 +85,7 @@ namespace GrokSdk
         /// Create a chat completion with Grok
         /// </summary>
         /// <returns>Successful chat completion response</returns>
-        /// <exception cref="ApiException">A server side error occurred.</exception>
+        /// <exception cref="GrokSdkException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<ChatCompletionResponse> CreateChatCompletionAsync(ChatCompletionRequest body, System.Threading.CancellationToken cancellationToken)
         {
             if (body == null)
@@ -137,7 +137,7 @@ namespace GrokSdk
                             var objectResponse_ = await ReadObjectResponseAsync<ChatCompletionResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
                             return objectResponse_.Object;
                         }
@@ -147,14 +147,14 @@ namespace GrokSdk
                             var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
-                                throw new ApiException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                                throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            throw new ApiException<ErrorResponse>("Invalid request (e.g., missing messages)", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                            throw new GrokSdkException<ErrorResponse>("Invalid request (e.g., missing messages)", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
                             var responseData_ = response_.Content == null ? null : await response_.Content.ReadAsStringAsync().ConfigureAwait(false);
-                            throw new ApiException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                            throw new GrokSdkException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
                         }
                     }
                     finally
@@ -204,7 +204,7 @@ namespace GrokSdk
                 catch (Newtonsoft.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body string as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, responseText, headers, exception);
+                    throw new GrokSdkException(message, (int)response.StatusCode, responseText, headers, exception);
                 }
             }
             else
@@ -223,7 +223,7 @@ namespace GrokSdk
                 catch (Newtonsoft.Json.JsonException exception)
                 {
                     var message = "Could not deserialize the response body stream as " + typeof(T).FullName + ".";
-                    throw new ApiException(message, (int)response.StatusCode, string.Empty, headers, exception);
+                    throw new GrokSdkException(message, (int)response.StatusCode, string.Empty, headers, exception);
                 }
             }
         }
@@ -1016,7 +1016,7 @@ namespace GrokSdk
 
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ApiException : System.Exception
+    public partial class GrokSdkException : System.Exception
     {
         public int StatusCode { get; private set; }
 
@@ -1024,7 +1024,7 @@ namespace GrokSdk
 
         public System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> Headers { get; private set; }
 
-        public ApiException(string message, int statusCode, string response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Exception innerException)
+        public GrokSdkException(string message, int statusCode, string response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, System.Exception innerException)
             : base(message + "\n\nStatus: " + statusCode + "\nResponse: \n" + ((response == null) ? "(null)" : response.Substring(0, response.Length >= 512 ? 512 : response.Length)), innerException)
         {
             StatusCode = statusCode;
@@ -1039,11 +1039,11 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NSwag", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ApiException<TResult> : ApiException
+    public partial class GrokSdkException<TResult> : GrokSdkException
     {
         public TResult Result { get; private set; }
 
-        public ApiException(string message, int statusCode, string response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, TResult result, System.Exception innerException)
+        public GrokSdkException(string message, int statusCode, string response, System.Collections.Generic.IReadOnlyDictionary<string, System.Collections.Generic.IEnumerable<string>> headers, TResult result, System.Exception innerException)
             : base(message, statusCode, response, headers, innerException)
         {
             Result = result;

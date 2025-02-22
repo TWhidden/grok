@@ -5,6 +5,7 @@ $swaggerFile = "grok-api.yaml"
 $outputFile = "GrokClient.cs"
 $namespace = "GrokSdk"
 $className = "GrokClient"
+$exceptionClassName = "GrokSdkException"
 $projectDir = Get-Location
 
 # Ensure nswag CLI is available
@@ -24,6 +25,7 @@ $nswagCommand = "nswag openapi2csclient " +
                 "/input:$swaggerFile " +
                 "/namespace:$namespace " +
                 "/className:$className " +
+                "/exceptionClass:$exceptionClassName " +
                 "/output:$outputFile "
 
 # Output detailed information
