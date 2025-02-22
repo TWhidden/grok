@@ -23,4 +23,5 @@ jobs:
       working-directory: ./src
       env:
         GROK_API_KEY: ${{ secrets.GROK_API_KEY }}
+        N2YO_API_KEY: ${{ secrets.N2YO_API_KEY }}
       run: dotnet test --no-build --verbosity normal

@@ -898,7 +898,7 @@ public class GrokClientTests
             var messages = new Collection<Message>
             {
                 new SystemMessage { Content = "You are an assistant with access to satellite data tools." },
-                new UserMessage { Content = "How many Starlink satellites are out there? Category Code 52" }
+                new UserMessage { Content = "How many Starlink satellites are out there? Category Code 52; Only give me the number back" }
             };
 
             // Define a tool to count Starlink satellites
@@ -909,8 +909,8 @@ public class GrokClientTests
                     Type = ToolType.Function,
                     Function = new FunctionDefinition
                     {
-                        Name = "get_satellite_data",
-                        Description = "Get the satellite data from n2yo website using the category code",
+                        Name = "get_satellite_count",
+                        Description = "Get the satellite count from n2yo website using the category code",
                         Parameters = new
                         {
                             type = "object",
@@ -943,12 +943,10 @@ public class GrokClientTests
             var response = await client.CreateChatCompletionAsync(request);
             var choice = response.Choices.First();
 
-            const int maxDataSetToGrok = 100;
-
             if (choice.Message.Tool_calls?.Count > 0)
             {
                 var toolCall = choice.Message.Tool_calls.First();
-                if (toolCall.Function.Name == "get_satellite_data")
+                if (toolCall.Function.Name == "get_satellite_count")
                 {
                     // Step 2: Call N2YO API to get Starlink satellite count
                     var args = JsonConvert.DeserializeObject<Dictionary<string, int>>(toolCall.Function.Arguments);
@@ -956,11 +954,13 @@ public class GrokClientTests
 
                     var data = await SatelliteHelper.GetSatellitesAsync(categoryCode);
 
-                    // Due to limits on the input of Grok (2 atm, we will limit the input to 100)
-                    var reducedData = data.Take(maxDataSetToGrok);
+                    var totalCount = new
+                    {
+                        SatelliteCount = data.Count
+                    };
 
-                    var result = JsonConvert.SerializeObject(reducedData);
-
+                    var result = JsonConvert.SerializeObject(totalCount);
+                    
                     // Add assistant message and tool result
                     messages.Add(choice.Message);
                     messages.Add(new ToolMessage
@@ -981,8 +981,16 @@ public class GrokClientTests
                     };
 
                     var finalResponse = await client.CreateChatCompletionAsync(followUpRequest);
-                    Console.WriteLine(finalResponse.Choices.First().Message.Content); 
-                    Assert.IsTrue(finalResponse.Choices.First().Message.Content.Contains($"{maxDataSetToGrok}"), $"Expected {maxDataSetToGrok}");
+                    var responseMessage = finalResponse.Choices.First().Message.Content;
+                    Console.WriteLine(responseMessage);
+                    if(int.TryParse(responseMessage, out var count))
+                    {
+                        Assert.IsTrue(count > 1000, $"Something isn't right - Starlink reporting {count} active?");
+                    }
+                    else
+                    {
+                        Assert.Fail("Expected only a number and the response was {}");
+                    }
                 }
             }
             else
