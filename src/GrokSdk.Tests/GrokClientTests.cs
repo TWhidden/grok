@@ -1018,7 +1018,7 @@ public class GrokClientTests
         // Arrange
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
-        var thread = new GrokThread(client);
+        var thread = client.GetGrokThread();
 
         // Helper function to collect all messages from the stream
         async Task<List<GrokMessage>> CollectMessagesAsync(string question)
@@ -1120,4 +1120,147 @@ public class GrokClientTests
         // Safety Check for Live Unit Tests to prevent API exhaustion
         await WaitForRateLimitAsync();
     }
+
+    [TestMethod]
+    [TestCategory("Live")]
+    public async Task GrokThread_SystemMessages_InfluenceResponses()
+    {
+        // Arrange
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
+        var thread = new GrokThread(client);
+
+        // Helper function to collect all messages from the stream
+        async Task<List<GrokMessage>> CollectMessagesAsync(string question)
+        {
+            var messages = new List<GrokMessage>();
+            await foreach (var message in thread.AskQuestion(question, temperature: 0))
+            {
+                messages.Add(message);
+            }
+            return messages;
+        }
+
+        // Helper function to extract the full response text
+        string ExtractResponse(List<GrokMessage> messages)
+        {
+            return string.Join("", messages
+                .OfType<GrokTextMessage>()
+                .Select(m => m.Message));
+        }
+
+        // Helper function to validate stream states
+        void ValidateStates(List<GrokMessage> messages)
+        {
+            var states = messages
+                .OfType<GrokStreamState>()
+                .Select(s => s.StreamState)
+                .ToList();
+
+            Assert.IsTrue(states.Contains(StreamState.Thinking),
+                "Stream should include 'Thinking' state.");
+            Assert.IsTrue(states.Contains(StreamState.Streaming),
+                "Stream should include 'Streaming' state.");
+            Assert.IsTrue(states.Contains(StreamState.Done),
+                "Stream should include 'Done' state.");
+            Assert.IsFalse(states.Contains(StreamState.Error),
+                "Stream should not have 'Error' state in successful case.");
+        }
+
+        // Helper to check if a string is valid JSON
+        bool IsValidJson(string text)
+        {
+            try
+            {
+                JsonConvert.DeserializeObject(text);
+                return true;
+            }
+            catch (JsonException)
+            {
+                return false;
+            }
+        }
+
+        // **Step 1: One-word response**
+        thread.AddSystemInstruction("Respond with only one word.");
+        string question1 = "What is the capital of France?";
+        await WaitForRateLimitAsync();
+        var messages1 = await CollectMessagesAsync(question1);
+
+        // Validate message sequence and states
+        Assert.IsTrue(messages1.Count > 2, "Should have state messages and at least one response part.");
+        Assert.IsInstanceOfType(messages1[0], typeof(GrokStreamState), "First message should be a state message.");
+        Assert.AreEqual(StreamState.Thinking, ((GrokStreamState)messages1[0]).StreamState, "First state should be 'Thinking'.");
+        ValidateStates(messages1);
+
+        // Extract and verify response
+        string response1 = ExtractResponse(messages1);
+        Assert.IsFalse(string.IsNullOrEmpty(response1), "Response should not be empty.");
+        Assert.AreEqual("Paris", response1.Trim(), "Response should be a single word 'France'.");
+        Assert.IsFalse(response1.Contains(" "), "Response should contain no spaces, indicating one word.");
+
+        // **Step 2: JSON response**
+        thread.AddSystemInstruction("Respond with raw JSON without markdown.");
+        string question2 = "What is the population of France?";
+        await WaitForRateLimitAsync();
+        var messages2 = await CollectMessagesAsync(question2);
+
+        // Validate message sequence and states
+        Assert.IsTrue(messages2.Count > 2, "Should have state messages and at least one response part.");
+        Assert.IsInstanceOfType(messages2[0], typeof(GrokStreamState), "First message should be a state message.");
+        Assert.AreEqual(StreamState.Thinking, ((GrokStreamState)messages2[0]).StreamState, "First state should be 'Thinking'.");
+        ValidateStates(messages2);
+
+        // Extract and verify response
+        string response2 = ExtractResponse(messages2);
+        Assert.IsFalse(string.IsNullOrEmpty(response2), "Response should not be empty.");
+        Assert.IsTrue(IsValidJson(response2), "Response should be valid JSON.");
+        dynamic jsonResponse = JsonConvert.DeserializeObject(response2)!;
+        Assert.IsTrue(jsonResponse.population != null, "JSON should contain a 'population' field.");
+
+        // **Step 3: Spanish translation**
+        thread.AddSystemInstruction("Translate all responses to Spanish.");
+        string question3 = "What is the weather like today?";
+        await WaitForRateLimitAsync();
+        var messages3 = await CollectMessagesAsync(question3);
+
+        // Validate message sequence and states
+        Assert.IsTrue(messages3.Count > 2, "Should have state messages and at least one response part.");
+        Assert.IsInstanceOfType(messages3[0], typeof(GrokStreamState), "First message should be a state message.");
+        Assert.AreEqual(StreamState.Thinking, ((GrokStreamState)messages3[0]).StreamState, "First state should be 'Thinking'.");
+        ValidateStates(messages3);
+
+        // Extract and verify response
+        string response3 = ExtractResponse(messages3);
+        Assert.IsFalse(string.IsNullOrEmpty(response3), "Response should not be empty.");
+        // Simple check for Spanish words (e.g., "el", "es", "hoy")
+        Assert.IsTrue(response3.Contains("el", StringComparison.OrdinalIgnoreCase) ||
+                      response3.Contains("es", StringComparison.OrdinalIgnoreCase) ||
+                      response3.Contains("hoy", StringComparison.OrdinalIgnoreCase),
+            "Response should contain common Spanish words indicating translation.");
+
+        // **Step 4: Verify last SystemMessage overrides previous ones**
+        string question4 = "What is my name?"; // No prior context, just testing instruction impact
+        await WaitForRateLimitAsync();
+        var messages4 = await CollectMessagesAsync(question4);
+
+        // Validate message sequence and states
+        Assert.IsTrue(messages4.Count > 2, "Should have state messages and at least one response part.");
+        Assert.IsInstanceOfType(messages4[0], typeof(GrokStreamState), "First message should be a state message.");
+        Assert.AreEqual(StreamState.Thinking, ((GrokStreamState)messages4[0]).StreamState, "First state should be 'Thinking'.");
+        ValidateStates(messages4);
+
+        // Extract and verify response
+        string response4 = ExtractResponse(messages4);
+        Assert.IsFalse(string.IsNullOrEmpty(response4), "Response should not be empty.");
+        Assert.IsFalse(IsValidJson(response4), "Response should not be JSON due to last Spanish instruction.");
+        Assert.IsFalse(response4.Split(' ').Length == 1, "Response should not be one word due to last Spanish instruction.");
+        Assert.IsTrue(response4.Contains("no", StringComparison.OrdinalIgnoreCase) ||
+                      response4.Contains("sé", StringComparison.OrdinalIgnoreCase),
+            "Response should be in Spanish, likely indicating 'I don’t know' (e.g., 'No sé').");
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
+    }
+
 }

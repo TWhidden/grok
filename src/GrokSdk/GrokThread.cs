@@ -51,6 +51,15 @@ public class GrokThread(GrokClient client)
     private readonly List<Message> _history = [];
 
     /// <summary>
+    /// Provide instruction to the system on how it should respond to the user.
+    /// </summary>
+    /// <param name="message"></param>
+    public void AddSystemInstruction(string message)
+    {
+        _history.Add(new SystemMessage() {Content = message});
+    }
+
+    /// <summary>
     ///     Asks a question and streams response text parts as an IAsyncEnumerable.
     /// </summary>
     /// <param name="question">The question to ask.</param>
