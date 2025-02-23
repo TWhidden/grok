@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrokSdk", "GrokSdk\GrokSdk.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrokSdk.Tests", "GrokSdk.Tests\GrokSdk.Tests.csproj", "{DA062682-06E0-4C30-BB3D-AFAFF78B3B43}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GrokSdk.ConsoleDemo", "GrokSdk.ConsoleDemo\GrokSdk.ConsoleDemo.csproj", "{AB7F1B21-4BAC-482F-BBBC-57621C829D4A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{DA062682-06E0-4C30-BB3D-AFAFF78B3B43}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DA062682-06E0-4C30-BB3D-AFAFF78B3B43}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DA062682-06E0-4C30-BB3D-AFAFF78B3B43}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AB7F1B21-4BAC-482F-BBBC-57621C829D4A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AB7F1B21-4BAC-482F-BBBC-57621C829D4A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AB7F1B21-4BAC-482F-BBBC-57621C829D4A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AB7F1B21-4BAC-482F-BBBC-57621C829D4A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

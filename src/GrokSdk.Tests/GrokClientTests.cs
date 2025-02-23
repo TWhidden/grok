@@ -1,9 +1,10 @@
-using Newtonsoft.Json;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using GrokSdk.Tests.Helpers;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace GrokSdk.Tests;
 
@@ -11,7 +12,7 @@ namespace GrokSdk.Tests;
 public class GrokClientTests
 {
     private static string? _apiToken;
-    private static readonly object Lock = new object();
+    private static readonly object Lock = new();
     private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();
     private static double _lastCallElapsedSeconds;
 
@@ -24,56 +25,42 @@ public class GrokClientTests
     private static string GetApiKeyFromFileOrEnv()
     {
         if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GROK_API_KEY")))
-        {
             return Environment.GetEnvironmentVariable("GROK_API_KEY")!;
-        }
 
-        string outputDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ??
-                                 throw new Exception("Failed to get assembly location");
-        string filePath = Path.Combine(outputDirectory, "apikey.txt");
+        var outputDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ??
+                              throw new Exception("Failed to get assembly location");
+        var filePath = Path.Combine(outputDirectory, "apikey.txt");
 
         if (!File.Exists(filePath))
-        {
             throw new FileNotFoundException("API key file 'apikey.txt' not found in the test output directory.");
-        }
 
-        string apiKey = File.ReadAllText(filePath).Trim();
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            throw new InvalidOperationException("API key file 'apikey.txt' is empty.");
-        }
+        var apiKey = File.ReadAllText(filePath).Trim();
+        if (string.IsNullOrEmpty(apiKey)) throw new InvalidOperationException("API key file 'apikey.txt' is empty.");
 
         return apiKey;
     }
 
-    private static string GetN2yoApiKeyFromFileOrEnv()
+    private static string GetN2YoApiKeyFromFileOrEnv()
     {
         if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("N2YO_API_KEY")))
-        {
             return Environment.GetEnvironmentVariable("N2YO_API_KEY")!;
-        }
 
-        string outputDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ??
-                                 throw new Exception("Failed to get assembly location");
-        string filePath = Path.Combine(outputDirectory, "n2yokey.txt");
+        var outputDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ??
+                              throw new Exception("Failed to get assembly location");
+        var filePath = Path.Combine(outputDirectory, "n2yokey.txt");
 
         if (!File.Exists(filePath))
-        {
             throw new FileNotFoundException("API key file 'n2yokey.txt' not found in the test output directory.");
-        }
 
-        string apiKey = File.ReadAllText(filePath).Trim();
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            throw new InvalidOperationException("API key file 'n2yokey.txt' is empty.");
-        }
+        var apiKey = File.ReadAllText(filePath).Trim();
+        if (string.IsNullOrEmpty(apiKey)) throw new InvalidOperationException("API key file 'n2yokey.txt' is empty.");
 
         return apiKey;
     }
 
     private static async Task WaitForRateLimitAsync()
     {
-        double currentElapsed = Stopwatch.Elapsed.TotalSeconds;
+        var currentElapsed = Stopwatch.Elapsed.TotalSeconds;
         double timeSinceLastCall;
         lock (Lock)
         {
@@ -82,7 +69,7 @@ public class GrokClientTests
 
         if (timeSinceLastCall < 1)
         {
-            double delaySeconds = 1 - timeSinceLastCall;
+            var delaySeconds = 1 - timeSinceLastCall;
             await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
             currentElapsed = Stopwatch.Elapsed.TotalSeconds;
         }
@@ -104,8 +91,8 @@ public class GrokClientTests
         {
             Messages = new Collection<Message>
             {
-                new SystemMessage() { Content = "You are a test assistant." },
-                new UserMessage() { Content = "Say hello world." }
+                new SystemMessage { Content = "You are a test assistant." },
+                new UserMessage { Content = "Say hello world." }
             },
             Model = "grok-2-latest",
             Stream = false,
@@ -131,6 +118,9 @@ public class GrokClientTests
             "Response content should contain 'hello world' (case-insensitive).");
         Assert.AreEqual(ChoiceFinish_reason.Stop, response.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
     }
 
     [TestMethod]
@@ -149,14 +139,14 @@ public class GrokClientTests
 
         var messages = new List<Message>
         {
-            new SystemMessage()
+            new SystemMessage
             {
                 Content =
                     "You are Grok, a helpful assistant. For this test conversation, please maintain context and respond deterministically to demonstrate your ability to remember details across multiple exchanges."
             }
         };
 
-        messages.Add(new UserMessage()
+        messages.Add(new UserMessage
         {
             Content = "My name is TestUser. Please remember that."
         });
@@ -181,18 +171,18 @@ public class GrokClientTests
 
         Assert.IsNotNull(response1, "First response should not be null.");
         Assert.IsTrue(response1.Choices.Count > 0, "First response should have at least one choice.");
-        string assistantResponse1 = response1.Choices.First().Message.Content.ToLower();
+        var assistantResponse1 = response1.Choices.First().Message.Content.ToLower();
         Assert.IsTrue(assistantResponse1.Contains("testuser") || assistantResponse1.Contains("remember"),
             "First response should acknowledge the name 'TestUser' or indicate remembering it.");
         Assert.AreEqual(ChoiceFinish_reason.Stop, response1.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
 
-        messages.Add(new AssistantMessage()
+        messages.Add(new AssistantMessage
         {
             Content = response1.Choices.First().Message.Content
         });
 
-        messages.Add(new UserMessage()
+        messages.Add(new UserMessage
         {
             Content = "What is my name?"
         });
@@ -217,18 +207,18 @@ public class GrokClientTests
 
         Assert.IsNotNull(response2, "Second response should not be null.");
         Assert.IsTrue(response2.Choices.Count > 0, "Second response should have at least one choice.");
-        string assistantResponse2 = response2.Choices.First().Message.Content.ToLower();
+        var assistantResponse2 = response2.Choices.First().Message.Content.ToLower();
         Assert.IsTrue(assistantResponse2.Contains("testuser"),
             "Second response should correctly recall the name 'TestUser'.");
         Assert.AreEqual(ChoiceFinish_reason.Stop, response2.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
 
-        messages.Add(new AssistantMessage()
+        messages.Add(new AssistantMessage
         {
             Content = response2.Choices.First().Message.Content
         });
 
-        messages.Add(new UserMessage()
+        messages.Add(new UserMessage
         {
             Content = "Good. Now, say 'Goodbye, TestUser!'"
         });
@@ -253,11 +243,14 @@ public class GrokClientTests
 
         Assert.IsNotNull(response3, "Third response should not be null.");
         Assert.IsTrue(response3.Choices.Count > 0, "Third response should have at least one choice.");
-        string assistantResponse3 = response3.Choices.First().Message.Content.ToLower();
+        var assistantResponse3 = response3.Choices.First().Message.Content.ToLower();
         Assert.IsTrue(assistantResponse3.Contains("goodbye") && assistantResponse3.Contains("testuser"),
             "Third response should say 'Goodbye, TestUser!' or a close variation.");
         Assert.AreEqual(ChoiceFinish_reason.Stop, response3.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
     }
 
     [TestMethod]
@@ -267,18 +260,18 @@ public class GrokClientTests
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
 
-        string targetName = "Dave";
+        var targetName = "Dave";
 
         var request = new ChatCompletionRequest
         {
             Messages = new Collection<Message>
             {
-                new SystemMessage()
+                new SystemMessage
                 {
                     Content =
                         "You are a bot that responds to commands. When given the command '/roast \"name\"', generate a funny and light-hearted roast for the provided name."
                 },
-                new UserMessage()
+                new UserMessage
                 {
                     Content = $"/roast \"{targetName}\""
                 }
@@ -304,13 +297,16 @@ public class GrokClientTests
         Assert.AreEqual("chat.completion", response.Object, "Response object type should be 'chat.completion'.");
         Assert.IsTrue(response.Choices.Count > 0, "Response should have at least one choice.");
 
-        string assistantResponse = response.Choices.First().Message.Content.ToLower();
-        bool isRoast = assistantResponse.Contains("roast") || assistantResponse.Contains("funny") ||
-                       assistantResponse.Contains(targetName.ToLower());
+        var assistantResponse = response.Choices.First().Message.Content.ToLower();
+        var isRoast = assistantResponse.Contains("roast") || assistantResponse.Contains("funny") ||
+                      assistantResponse.Contains(targetName.ToLower());
         Assert.IsTrue(isRoast, "Response should contain a roast-like message for the given name.");
 
         Assert.AreEqual(ChoiceFinish_reason.Stop, response.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
     }
 
     [TestMethod]
@@ -322,8 +318,8 @@ public class GrokClientTests
         var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
 
         // Define the image URL (publicly accessible Eiffel Tower image) and text prompt
-        string imageUrl = "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg";
-        string textPrompt = "What is in this image?";
+        var imageUrl = "https://upload.wikimedia.org/wikipedia/commons/a/a8/Tour_Eiffel_Wikimedia_Commons.jpg";
+        var textPrompt = "What is in this image?";
 
         // Create the content array with image_url and text parts
         var contentParts = new List<object>
@@ -333,7 +329,7 @@ public class GrokClientTests
         };
 
         // Serialize the content array to a JSON string for UserMessage.Content
-        string contentJson = Newtonsoft.Json.JsonConvert.SerializeObject(contentParts);
+        var contentJson = JsonConvert.SerializeObject(contentParts);
 
         // Create the request with SystemMessage and UserMessage
         var request = new ChatCompletionRequest
@@ -366,14 +362,17 @@ public class GrokClientTests
         Assert.AreEqual("chat.completion", response.Object, "Response object type should be 'chat.completion'.");
         Assert.IsTrue(response.Choices.Count > 0, "Response should have at least one choice.");
 
-        string assistantResponse = response.Choices.First().Message.Content.ToLower();
-        bool mentionsImage = assistantResponse.Contains("eiffel") ||
-                             assistantResponse.Contains("tower") ||
-                             assistantResponse.Contains("paris");
+        var assistantResponse = response.Choices.First().Message.Content.ToLower();
+        var mentionsImage = assistantResponse.Contains("eiffel") ||
+                            assistantResponse.Contains("tower") ||
+                            assistantResponse.Contains("paris");
         Assert.IsTrue(mentionsImage,
             "Response should mention something about the image, such as 'Eiffel', 'tower', or 'Paris'.");
         Assert.AreEqual(ChoiceFinish_reason.Stop, response.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
     }
 
     [TestMethod]
@@ -400,29 +399,27 @@ public class GrokClientTests
             Temperature = 0f
         };
 
-        bool streamStarted = false;
-        bool chunkReceived = false;
-        bool streamCompleted = false;
+        var streamStarted = false;
+        var chunkReceived = false;
+        var streamCompleted = false;
         var stateTransitions = new List<StreamState>();
         var streamedContent = new StringBuilder();
 
-        streamingClient.OnStreamStarted += (s, e) => streamStarted = true;
-        streamingClient.OnChunkReceived += (s, chunk) =>
+        streamingClient.OnStreamStarted += (_, _) => streamStarted = true;
+        streamingClient.OnChunkReceived += (_, chunk) =>
         {
             chunkReceived = true;
-            string? content = chunk.Choices[0].Delta.Content;
-            if (!string.IsNullOrEmpty(content))
-            {
-                streamedContent.Append(content);
-            }
+            var content = chunk.Choices[0].Delta.Content;
+            if (!string.IsNullOrEmpty(content)) streamedContent.Append(content);
         };
-        streamingClient.OnStreamCompleted += (s, e) => streamCompleted = true;
-        streamingClient.OnStateChanged += (s, state) => stateTransitions.Add(state);
-        streamingClient.OnStreamError += (s, ex) => Assert.Fail($"Streaming failed: {ex.Message}");
+        streamingClient.OnStreamCompleted += (_, _) => streamCompleted = true;
+        streamingClient.OnStateChanged += (_, state) => stateTransitions.Add(state);
+        streamingClient.OnStreamError += (_, ex) => Assert.Fail($"Streaming failed: {ex.Message}");
 
         // Act
         await WaitForRateLimitAsync();
-        await streamingClient.StartStreamAsync(request);
+        using var cancellationTokenSource = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        await streamingClient.StartStreamAsync(request, cancellationTokenSource.Token);
 
         // Assert
         Assert.IsTrue(streamStarted, "Stream should have started.");
@@ -436,12 +433,15 @@ public class GrokClientTests
         Assert.IsFalse(stateTransitions.Contains(StreamState.Error), "State should not have transitioned to Error.");
 
         // Verify streamed content
-        string finalContent = streamedContent.ToString().ToLower();
+        var finalContent = streamedContent.ToString().ToLower();
         var words = finalContent.Split(' ');
         Assert.IsTrue(words.Length >= minWords, $"Streamed words should be >= {minWords} words. we got {words.Length}");
         Assert.IsTrue(words.Length <= maxWords, $"Streamed be <= {minWords} words. We got {words.Length}");
         Assert.IsTrue(finalContent.Contains("story") || finalContent.Contains("once") || finalContent.Contains("end"),
             "Streamed content should resemble a short story.");
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
     }
 
     [TestMethod]
@@ -454,7 +454,7 @@ public class GrokClientTests
         // Define tools similar to the Grok docs example
         var tools = new Collection<Tool>
         {
-            new Tool
+            new()
             {
                 Type = ToolType.Function,
                 Function = new FunctionDefinition
@@ -488,7 +488,7 @@ public class GrokClientTests
             Stream = false,
             Temperature = 0f,
             Tools = tools,
-            Tool_choice = Tool_choice.Auto
+            Tool_choice = Tool_choice.Required
         };
 
         await WaitForRateLimitAsync();
@@ -505,13 +505,13 @@ public class GrokClientTests
         Assert.IsNotNull(responseAuto, "Response (auto) should not be null.");
         Assert.IsTrue(responseAuto.Choices.Count > 0, "Response (auto) should have at least one choice.");
         var autoChoice = responseAuto.Choices.First();
-        bool toolCalledAuto = autoChoice.Message.Tool_calls?.Count > 0;
-        bool contentProvidedAuto = !string.IsNullOrEmpty(autoChoice.Message.Content);
+        var toolCalledAuto = autoChoice.Message.Tool_calls?.Count > 0;
+        var contentProvidedAuto = !string.IsNullOrEmpty(autoChoice.Message.Content);
         Assert.IsTrue(toolCalledAuto || contentProvidedAuto,
             "Response (auto) should either call a tool or provide content.");
         if (toolCalledAuto)
         {
-            Assert.AreEqual("get_current_temperature", autoChoice.Message.Tool_calls.First().Function.Name,
+            Assert.AreEqual("get_current_temperature", autoChoice.Message.Tool_calls?.First().Function.Name,
                 "Tool call (auto) should match the defined tool.");
             Assert.AreEqual(ChoiceFinish_reason.Tool_calls, autoChoice.Finish_reason,
                 "Finish reason (auto) should be 'tool_calls' when a tool is used.");
@@ -593,6 +593,9 @@ public class GrokClientTests
             "Tool call (required) should match the defined tool.");
         Assert.AreEqual(ChoiceFinish_reason.Tool_calls, requiredChoice.Finish_reason,
             "Finish reason (required) should be 'tool_calls'.");
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
     }
 
     [TestMethod]
@@ -605,7 +608,7 @@ public class GrokClientTests
         // Define the tool
         var tools = new Collection<Tool>
         {
-            new Tool
+            new()
             {
                 Type = ToolType.Function,
                 Function = new FunctionDefinition
@@ -667,13 +670,13 @@ public class GrokClientTests
             Assert.AreEqual("get_current_temperature", toolCall.Function.Name,
                 "Tool should be get_current_temperature.");
 
-            var args =
-                Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, string>>(toolCall.Function.Arguments);
-            string location = args["location"];
+            var args = JsonConvert.DeserializeObject<Dictionary<string, string>>(toolCall.Function.Arguments) ??
+                       throw new Exception("Could not process arguments from function");
+            var location = args["location"];
             Assert.AreEqual("Paris", location, "Tool call should target Paris.");
 
             // Mock implementation (replace with real API call if desired)
-            string result = location == "Paris"
+            var result = location == "Paris"
                 ? "{\"location\": \"Paris\", \"temperature\": 15, \"unit\": \"celsius\"}"
                 : "{\"location\": \"unknown\", \"temperature\": null, \"unit\": \"celsius\"}";
 
@@ -716,6 +719,9 @@ public class GrokClientTests
                 "Final response should mention Paris temperature (15°C).");
             Assert.AreEqual(ChoiceFinish_reason.Stop, finalChoice.Finish_reason,
                 "Final finish reason should be 'stop'.");
+
+            // Safety Check for Live Unit Tests to prevent API exhaustion
+            await WaitForRateLimitAsync();
         }
     }
 
@@ -729,7 +735,7 @@ public class GrokClientTests
         // Define a tool to get satellite position
         var tools = new Collection<Tool>
         {
-            new Tool
+            new()
             {
                 Type = ToolType.Function,
                 Function = new FunctionDefinition
@@ -786,26 +792,28 @@ public class GrokClientTests
             Assert.AreEqual("get_starlink_position", toolCall.Function.Name, "Tool should be get_starlink_position.");
 
             var args =
-                Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, int>>(toolCall.Function.Arguments);
-            int noradId = args["norad_id"];
+                JsonConvert.DeserializeObject<Dictionary<string, int>>(toolCall.Function.Arguments) ??
+                throw new Exception("Could not process arguments from function");
+            var noradId = args["norad_id"];
             Assert.AreEqual(25544, noradId, "Tool call should target NORAD ID 25544.");
 
             // Step 2: Hit the real N2YO API
-            string apiKey = GetN2yoApiKeyFromFileOrEnv();
-            string url =
+            var apiKey = GetN2YoApiKeyFromFileOrEnv();
+            var url =
                 $"https://api.n2yo.com/rest/v1/satellite/positions/{noradId}/48.8566/2.3522/0/1/&apiKey={apiKey}";
             string result;
             try
             {
-                var n2yoResponse = await httpClient.GetAsync(url);
-                n2yoResponse.EnsureSuccessStatusCode();
-                string json = await n2yoResponse.Content.ReadAsStringAsync();
-                dynamic data = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+                var n2YoResponse = await httpClient.GetAsync(url);
+                n2YoResponse.EnsureSuccessStatusCode();
+                var json = await n2YoResponse.Content.ReadAsStringAsync();
+                dynamic data = JsonConvert.DeserializeObject(json) ??
+                               throw new Exception("could not process response data");
 
                 // Verify response structure
                 Assert.IsNotNull(data.info, "N2YO response should contain 'info'.");
                 Assert.IsNotNull(data.positions, "N2YO response should contain 'positions'.");
-                Assert.IsTrue(((Newtonsoft.Json.Linq.JArray)data.positions).Count > 0,
+                Assert.IsTrue(((JArray)data.positions).Count > 0,
                     "N2YO 'positions' should have at least one entry.");
 
                 var position = data.positions[0];
@@ -814,9 +822,9 @@ public class GrokClientTests
                 Assert.IsNotNull(position.sataltitude, "Position should include 'sataltitude'.");
 
                 // Handle optional timestamp
-                long? timestamp = data.info.timestamp != null ? (long?)data.info.timestamp : null;
+                var timestamp = data.info.timestamp != null ? (long?)data.info.timestamp : null;
 
-                result = Newtonsoft.Json.JsonConvert.SerializeObject(new
+                result = JsonConvert.SerializeObject(new
                 {
                     norad_id = noradId,
                     latitude = (double)position.satlatitude,
@@ -884,126 +892,232 @@ public class GrokClientTests
         {
             Assert.Inconclusive("Grok did not request a tool call with 'auto'; cannot test external API integration.");
         }
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
     }
 
     [TestMethod]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveToolChoice_AskStarlinkSatelliteCount()
     {
-        try
+        var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
+
+        var messages = new Collection<Message>
         {
-            var httpClient = new HttpClient();
-            var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
-
-            var messages = new Collection<Message>
+            new SystemMessage { Content = "You are an assistant with access to satellite data tools." },
+            new UserMessage
             {
-                new SystemMessage { Content = "You are an assistant with access to satellite data tools." },
-                new UserMessage { Content = "How many Starlink satellites are out there? Category Code 52; Only give me the number back" }
-            };
+                Content = "How many Starlink satellites are out there? Category Code 52; Only give me the number back"
+            }
+        };
 
-            // Define a tool to count Starlink satellites
-            var tools = new Collection<Tool>
+        // Define a tool to count Starlink satellites
+        var tools = new Collection<Tool>
+        {
+            new()
             {
-                new Tool
+                Type = ToolType.Function,
+                Function = new FunctionDefinition
                 {
-                    Type = ToolType.Function,
-                    Function = new FunctionDefinition
+                    Name = "get_satellite_count",
+                    Description = "Get the satellite count from n2yo website using the category code",
+                    Parameters = new
                     {
-                        Name = "get_satellite_count",
-                        Description = "Get the satellite count from n2yo website using the category code",
-                        Parameters = new
+                        type = "object",
+                        properties = new
                         {
-                            type = "object",
-                            properties = new
+                            categoryCode = new
                             {
-                                categoryCode = new
-                                {
-                                    type = "number",
-                                    description =
-                                        "The Category Code for n2yo website for a specific company (such as Starlink 52)"
-                                }
-                            },
-                            required = new[] { "categoryCode" }
-                        }
-                    }
-                }
-            };
-
-            // Step 1: Initial request to Grok
-            var request = new ChatCompletionRequest
-            {
-                Messages = messages,
-                Model = "grok-2-latest",
-                Stream = false,
-                Temperature = 0f,
-                Tools = tools,
-                Tool_choice = Tool_choice.Auto // Let Grok decide to use the tool
-            };
-
-            var response = await client.CreateChatCompletionAsync(request);
-            var choice = response.Choices.First();
-
-            if (choice.Message.Tool_calls?.Count > 0)
-            {
-                var toolCall = choice.Message.Tool_calls.First();
-                if (toolCall.Function.Name == "get_satellite_count")
-                {
-                    // Step 2: Call N2YO API to get Starlink satellite count
-                    var args = JsonConvert.DeserializeObject<Dictionary<string, int>>(toolCall.Function.Arguments);
-                    var categoryCode = args["categoryCode"];
-
-                    var data = await SatelliteHelper.GetSatellitesAsync(categoryCode);
-
-                    var totalCount = new
-                    {
-                        SatelliteCount = data.Count
-                    };
-
-                    var result = JsonConvert.SerializeObject(totalCount);
-                    
-                    // Add assistant message and tool result
-                    messages.Add(choice.Message);
-                    messages.Add(new ToolMessage
-                    {
-                        Content = result,
-                        Tool_call_id = toolCall.Id
-                    });
-                    
-                    // Step 3: Send back to Grok
-                    var followUpRequest = new ChatCompletionRequest
-                    {
-                        Messages = messages,
-                        Model = "grok-2-latest",
-                        Stream = false,
-                        Temperature = 0f,
-                        Tools = tools,
-                        Tool_choice = Tool_choice.Auto
-                    };
-
-                    var finalResponse = await client.CreateChatCompletionAsync(followUpRequest);
-                    var responseMessage = finalResponse.Choices.First().Message.Content;
-                    Console.WriteLine(responseMessage);
-                    if(int.TryParse(responseMessage, out var count))
-                    {
-                        Assert.IsTrue(count > 1000, $"Something isn't right - Starlink reporting {count} active?");
-                    }
-                    else
-                    {
-                        Assert.Fail("Expected only a number and the response was {}");
+                                type = "number",
+                                description =
+                                    "The Category Code for n2yo website for a specific company (such as Starlink 52)"
+                            }
+                        },
+                        required = new[] { "categoryCode" }
                     }
                 }
             }
-            else
-            {
-                Assert.Fail("The Tool was not called like it should have been!");
-            }
-        }
-        catch (Exception ex)
+        };
+
+        // Step 1: Initial request to Grok
+        var request = new ChatCompletionRequest
         {
-            throw;
+            Messages = messages,
+            Model = "grok-2-latest",
+            Stream = false,
+            Temperature = 0f,
+            Tools = tools,
+            Tool_choice = Tool_choice.Auto // Let Grok decide to use the tool
+        };
+
+        var response = await client.CreateChatCompletionAsync(request);
+        var choice = response.Choices.First();
+
+        if (choice.Message.Tool_calls?.Count > 0)
+        {
+            var toolCall = choice.Message.Tool_calls.First();
+            if (toolCall.Function.Name == "get_satellite_count")
+            {
+                // Step 2: Call N2YO API to get Starlink satellite count
+                var args = JsonConvert.DeserializeObject<Dictionary<string, int>>(toolCall.Function.Arguments) ??
+                           throw new Exception("Could not process arguments from function");
+                var categoryCode = args["categoryCode"];
+
+                var data = await SatelliteHelper.GetSatellitesAsync(categoryCode);
+
+                var totalCount = new
+                {
+                    SatelliteCount = data.Count
+                };
+
+                var result = JsonConvert.SerializeObject(totalCount);
+
+                // Add assistant message and tool result
+                messages.Add(choice.Message);
+                messages.Add(new ToolMessage
+                {
+                    Content = result,
+                    Tool_call_id = toolCall.Id
+                });
+
+                // Step 3: Send back to Grok
+                var followUpRequest = new ChatCompletionRequest
+                {
+                    Messages = messages,
+                    Model = "grok-2-latest",
+                    Stream = false,
+                    Temperature = 0f,
+                    Tools = tools,
+                    Tool_choice = Tool_choice.Auto
+                };
+
+                var finalResponse = await client.CreateChatCompletionAsync(followUpRequest);
+                var responseMessage = finalResponse.Choices.First().Message.Content;
+                Console.WriteLine(responseMessage);
+                if (int.TryParse(responseMessage, out var count))
+                    Assert.IsTrue(count > 1000, $"Something isn't right - Starlink reporting {count} active?");
+                else
+                    Assert.Fail("Expected only a number and the response was {}");
+            }
         }
+        else
+        {
+            Assert.Fail("The Tool was not called like it should have been!");
+        }
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
     }
 
+    [TestMethod]
+    [TestCategory("Live")]
+    public async Task GrokThread_AskMultipleQuestions_MaintainsContextAndStreamsResponses()
+    {
+        // Arrange
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
+        var thread = new GrokThread(client);
 
+        // Helper function to collect all messages from the stream
+        async Task<List<GrokMessage>> CollectMessagesAsync(string question)
+        {
+            var messages = new List<GrokMessage>();
+            await foreach (var message in thread.AskQuestion(question, temperature: 0)) messages.Add(message);
+            return messages;
+        }
 
+        // Helper function to extract the full response text
+        string ExtractResponse(List<GrokMessage> messages)
+        {
+            return string.Join("", messages
+                .OfType<GrokTextMessage>()
+                .Select(m => m.Message));
+        }
+
+        // Helper function to validate stream states
+        void ValidateStates(List<GrokMessage> messages)
+        {
+            var states = messages
+                .OfType<GrokStreamState>()
+                .Select(s => s.StreamState)
+                .ToList();
+
+            Assert.IsTrue(states.Contains(StreamState.Thinking),
+                "Stream should include 'Thinking' state.");
+            Assert.IsTrue(states.Contains(StreamState.Streaming),
+                "Stream should include 'Streaming' state.");
+            Assert.IsTrue(states.Contains(StreamState.Done),
+                "Stream should include 'Done' state.");
+            Assert.IsFalse(states.Contains(StreamState.Error),
+                "Stream should not have 'Error' state in successful case.");
+        }
+
+        // **Question 1: Set context with a name**
+        var question1 = "My name is TestUser.";
+        await WaitForRateLimitAsync();
+        var messages1 = await CollectMessagesAsync(question1);
+
+        // Validate message sequence and states
+        Assert.IsTrue(messages1.Count > 2,
+            "Should have state messages and at least one response part.");
+        Assert.IsInstanceOfType(messages1[0], typeof(GrokStreamState),
+            "First message should be a state message.");
+        Assert.AreEqual(StreamState.Thinking, ((GrokStreamState)messages1[0]).StreamState,
+            "First state should be 'Thinking'.");
+        ValidateStates(messages1);
+
+        // Extract and verify response
+        var response1 = ExtractResponse(messages1);
+        Assert.IsFalse(string.IsNullOrEmpty(response1),
+            "Response should not be empty.");
+        Assert.IsTrue(response1.Contains("TestUser", StringComparison.OrdinalIgnoreCase),
+            "Response should acknowledge 'TestUser'.");
+
+        // **Question 2: Verify context by recalling the name**
+        var question2 = "What is my name?";
+        await WaitForRateLimitAsync();
+        var messages2 = await CollectMessagesAsync(question2);
+
+        // Validate message sequence and states
+        Assert.IsTrue(messages2.Count > 2,
+            "Should have state messages and at least one response part.");
+        Assert.IsInstanceOfType(messages2[0], typeof(GrokStreamState),
+            "First message should be a state message.");
+        Assert.AreEqual(StreamState.Thinking, ((GrokStreamState)messages2[0]).StreamState,
+            "First state should be 'Thinking'.");
+        ValidateStates(messages2);
+
+        // Extract and verify response
+        var response2 = ExtractResponse(messages2);
+        Assert.IsFalse(string.IsNullOrEmpty(response2),
+            "Response should not be empty.");
+        Assert.IsTrue(response2.Contains("TestUser", StringComparison.OrdinalIgnoreCase),
+            "Response should recall 'TestUser'.");
+
+        // **Question 3: Test context with a story**
+        var question3 = "Tell me a short story about TestUser.";
+        await WaitForRateLimitAsync();
+        var messages3 = await CollectMessagesAsync(question3);
+
+        // Validate message sequence and states
+        Assert.IsTrue(messages3.Count > 2,
+            "Should have state messages and at least one response part.");
+        Assert.IsInstanceOfType(messages3[0], typeof(GrokStreamState),
+            "First message should be a state message.");
+        Assert.AreEqual(StreamState.Thinking, ((GrokStreamState)messages3[0]).StreamState,
+            "First state should be 'Thinking'.");
+        ValidateStates(messages3);
+
+        // Extract and verify response
+        var response3 = ExtractResponse(messages3);
+        Assert.IsFalse(string.IsNullOrEmpty(response3),
+            "Response should not be empty.");
+        Assert.IsTrue(response3.Contains("TestUser", StringComparison.OrdinalIgnoreCase),
+            "Response should include 'TestUser' in the story.");
+
+        // Safety Check for Live Unit Tests to prevent API exhaustion
+        await WaitForRateLimitAsync();
+    }
 }
