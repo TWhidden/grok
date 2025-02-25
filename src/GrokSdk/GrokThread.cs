@@ -1,12 +1,11 @@
 ﻿using System.Threading.Channels;
-using System.Text;
 
 namespace GrokSdk;
 
 /// <summary>
 /// Base message type for different kinds of responses, nullable enabled
 /// </summary>
-public abstract record GrokMessage
+public abstract record GrokMessageBase
 {
 }
 
@@ -14,7 +13,7 @@ public abstract record GrokMessage
 /// Text message type inheriting from GrokMessage
 /// </summary>
 /// <param name="Message"></param>
-public record GrokTextMessage(string Message) : GrokMessage
+public record GrokTextMessage(string Message) : GrokMessageBase
 {
 }
 
@@ -22,7 +21,7 @@ public record GrokTextMessage(string Message) : GrokMessage
 /// Service based messages from Grok
 /// </summary>
 /// <param name="Message"></param>
-public record GrokServiceMessage(string Message) : GrokMessage
+public record GrokServiceMessage(string Message) : GrokMessageBase
 {
 }
 
@@ -30,7 +29,7 @@ public record GrokServiceMessage(string Message) : GrokMessage
 /// Exception handle indicating a failure occured
 /// </summary>
 /// <param name="Exception"></param>
-public record GrokError(Exception Exception) : GrokMessage
+public record GrokError(Exception Exception) : GrokMessageBase
 {
 
 }
@@ -39,155 +38,164 @@ public record GrokError(Exception Exception) : GrokMessage
 /// The State of the stream
 /// </summary>
 /// <param name="StreamState"></param>
-public record GrokStreamState(StreamState StreamState) : GrokMessage
+public record GrokStreamState(StreamState StreamState) : GrokMessageBase
 {
 
 }
 
-// Manages the conversation thread
+/// <summary>
+/// Manages the conversation thread with Grok, handling messages and tool calls.
+/// </summary>
 public class GrokThread(GrokClient client)
 {
     private readonly GrokClient _client = client ?? throw new ArgumentNullException(nameof(client));
-    private readonly List<Message> _history = [];
+    private readonly List<GrokMessage> _history = new();
+    private readonly Dictionary<string, GrokToolDefinition> _tools = new();
 
     /// <summary>
     /// Provide instruction to the system on how it should respond to the user.
     /// </summary>
-    /// <param name="message"></param>
+    /// <param name="message">The instruction message to add.</param>
     public void AddSystemInstruction(string message)
     {
-        _history.Add(new SystemMessage() {Content = message});
+        _history.Add(new GrokSystemMessage { Content = message });
     }
 
     /// <summary>
-    ///     Asks a question and streams response text parts as an IAsyncEnumerable.
+    /// Registers a tool with the thread, making it available for Grok to use.
+    /// </summary>
+    /// <param name="tool">The tool definition to register.</param>
+    public void RegisterTool(GrokToolDefinition tool)
+    {
+        if (tool == null)
+            throw new ArgumentNullException(nameof(tool));
+
+
+#if NETSTANDARD2_0
+        if (_tools.ContainsKey(tool.Name))
+        {
+            throw new ArgumentException($"A tool with name '{tool.Name}' already exists.");
+        }
+        _tools.Add(tool.Name, tool);
+#else
+        if (!_tools.TryAdd(tool.Name, tool))
+            throw new ArgumentException($"A tool with name '{tool.Name}' already exists.");
+#endif
+
+    }
+
+    /// <summary>
+    /// Asks a question and processes the response, providing status updates and results via an IAsyncEnumerable.
     /// </summary>
     /// <param name="question">The question to ask.</param>
+    /// <param name="files">Files to do an analysis on (optional).</param>
     /// <param name="model">The model to use (default: "grok-2-latest").</param>
     /// <param name="temperature">The temperature for response generation (default: 0).</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>An IAsyncEnumerable of GrokMessage containing the question and responses.</returns>
+    /// <returns>An IAsyncEnumerable of GrokMessageBase containing status updates and responses.</returns>
     /// <exception cref="ArgumentException">Thrown if the question is null or empty.</exception>
-    public IAsyncEnumerable<GrokMessage> AskQuestion(
+    public IAsyncEnumerable<GrokMessageBase> AskQuestion(
         string? question,
-        string? model = "grok-2-latest",
+        List<byte[]>? files = null,
+        string model = "grok-2-latest",
         float temperature = 0,
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrEmpty(question))
             throw new ArgumentException("Question cannot be null or empty.", nameof(question));
 
-        _history.Add(new UserMessage { Content = question });
+        _history.Add(new GrokUserMessage { Content = [new GrokTextPart(){Text = question }]});
 
-        var channel = Channel.CreateUnbounded<GrokMessage>();
+        var channel = Channel.CreateUnbounded<GrokMessageBase>();
 
-        _ = Task.Run(async () => await StreamResponsesAsync(
-            new ChatCompletionRequest
+        _ = Task.Run(async () =>
+        {
+            try
             {
-                Messages = _history,
-                Model = model,
-                Temperature = temperature,
-                Stream = true
-            },
-            channel,
-            cancellationToken), cancellationToken);
+                await ProcessConversationAsync(model, temperature, channel, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                channel.Writer.TryWrite(new GrokError(ex));
+                channel.Writer.TryWrite(new GrokStreamState(StreamState.Error));
+                channel.Writer.TryComplete(ex);
+            }
+        }, cancellationToken);
 
         return channel.Reader.ReadAllAsync(cancellationToken);
     }
 
     /// <summary>
-    ///     Streams the question and responses to the channel using the streaming client.
+    /// Processes the conversation by handling tool calls and sending the final response.
     /// </summary>
-    /// <param name="request">The chat completion request.</param>
+    /// <param name="model">The model to use.</param>
+    /// <param name="temperature">The temperature for response generation.</param>
     /// <param name="channel">The channel to write messages to.</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
-    private async Task StreamResponsesAsync(
-        ChatCompletionRequest request,
-        Channel<GrokMessage> channel,
+    private async Task ProcessConversationAsync(
+        string model,
+        float temperature,
+        Channel<GrokMessageBase> channel,
         CancellationToken cancellationToken)
     {
-        var streamingClient = _client.GetStreamingClient();
+        bool toolCallsPending = true;
 
-        var responseBuilder = new StringBuilder();
-
-        const int maxRetries = 3;
-        const int defaultDelayMs = 1000; // 1 second default delay if Retry-After is missing
-        int retryCount = 0;
-
-        streamingClient.OnChunkReceived += OnChunkReceived;
-        streamingClient.OnStreamCompleted += OnStreamCompleted;
-        streamingClient.OnStreamError += OnStreamError;
-        streamingClient.OnStateChanged += OnStateChanged;
-
-        while (retryCount <= maxRetries)
+        while (toolCallsPending)
         {
-            try
-            {
-                await streamingClient.StartStreamAsync(request, cancellationToken);
-                break; // Success, exit retry loop
-            }
-            catch (GrokSdkException ex) when (ex.StatusCode == 429 && retryCount < maxRetries)
-            {
-                retryCount++;
-                channel.Writer.TryWrite(new GrokServiceMessage($"Rate limit hit, retrying ({retryCount}/{maxRetries})..."));
+            // Send "Thinking" status before making the API call
+            channel.Writer.TryWrite(new GrokStreamState(StreamState.Thinking));
 
-                // Check for Retry-After header
-                int delayMs = defaultDelayMs;
-                if (ex.Headers.TryGetValue("Retry-After", out var retryAfterValues))
+            var request = new GrokChatCompletionRequest
+            {
+                Messages = _history,
+                Model = model,
+                Temperature = temperature,
+                Stream = false, // Always non-streaming
+                Tools = _tools.Any() ? _tools.Values.Select(t => new GrokTool
                 {
-                    var retryAfter = retryAfterValues?.FirstOrDefault();
-                    if (int.TryParse(retryAfter, out var seconds))
+                    Type = GrokToolType.Function,
+                    Function = new GrokFunctionDefinition
                     {
-                        delayMs = seconds * 1000; // Convert seconds to milliseconds
+                        Name = t.Name,
+                        Description = t.Description,
+                        Parameters = t.Parameters
+                    }
+                }).ToList() : null,
+                Tool_choice = _tools.Any() ? Tool_choice.Auto : null
+            };
+
+            channel.Writer.TryWrite(new GrokStreamState(StreamState.Streaming));
+            var response = await _client.CreateChatCompletionAsync(request, cancellationToken);
+            var choice = response.Choices.First();
+
+            if (choice.Message.Tool_calls?.Count > 0)
+            {
+                foreach (var toolCall in choice.Message.Tool_calls)
+                {
+                    if (_tools.TryGetValue(toolCall.Function.Name, out var tool))
+                    {
+                        channel.Writer.TryWrite(new GrokStreamState(StreamState.Streaming));
+                        string result = await tool.Execute(toolCall.Function.Arguments);
+                        
+                        _history.Add(new GrokToolMessage { Content = result, Tool_call_id = toolCall.Id });
+                        
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Tool '{toolCall.Function.Name}' not found.");
                     }
                 }
-
-                await Task.Delay(delayMs, cancellationToken);
             }
-            catch (Exception ex)
-            {
-                OnStreamError(this, ex); // Handle other exceptions immediately
-                break;
-            }
-        }
-
-        streamingClient.OnChunkReceived -= OnChunkReceived;
-        streamingClient.OnStreamCompleted -= OnStreamCompleted;
-        streamingClient.OnStreamError -= OnStreamError;
-        streamingClient.OnStateChanged -= OnStateChanged;
-
-        return;
-
-        return;
-
-        void OnChunkReceived(object? sender, ChatCompletionChunk chunk)
-        {
-            var content = chunk.Choices.FirstOrDefault()?.Delta.Content;
-            if (string.IsNullOrEmpty(content)) return;
-            channel.Writer.TryWrite(new GrokTextMessage(content));
-            responseBuilder.Append(content);
-        }
-
-        void OnStreamError(object? sender, Exception ex)
-        {
-            if (ex is OperationCanceledException)
-                channel.Writer.TryWrite(new GrokTextMessage("Stream canceled"));
             else
-                channel.Writer.TryWrite(new GrokError(ex));
-            channel.Writer.TryComplete(ex);
-        }
-
-        void OnStateChanged(object? sender, StreamState e)
-        {
-            channel.Writer.TryWrite(new GrokStreamState(e));
-        }
-
-        void OnStreamCompleted(object? sender, EventArgs e)
-        {
-            // Record the full response in the chat history for thread context
-            var fullResponse = responseBuilder.ToString();
-            _history.Add(new AssistantMessage { Content = fullResponse });
-            channel.Writer.Complete();
+            {
+                toolCallsPending = false;
+                _history.Add(choice.Message);
+                
+                // Send the final response to the channel
+                channel.Writer.TryWrite(new GrokTextMessage(choice.Message.Content));
+                channel.Writer.TryWrite(new GrokStreamState(StreamState.Done));
+                channel.Writer.Complete();
+            }
         }
     }
 }

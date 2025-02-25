@@ -52,7 +52,7 @@ public class GrokStreamingClient
     /// <param name="cancellationToken">Cancel the current request</param>
     /// <returns>A task representing the streaming operation.</returns>
     /// <exception cref="ArgumentNullException">Thrown if the request is null.</exception>
-    public async Task StartStreamAsync(ChatCompletionRequest request, CancellationToken cancellationToken)
+    public async Task StartStreamAsync(GrokChatCompletionRequest request, CancellationToken cancellationToken)
     {
         if (request == null)
             throw new ArgumentNullException(nameof(request));
@@ -88,7 +88,7 @@ public class GrokStreamingClient
     }
 
     private async Task<HttpResponseMessage> SendStreamingRequestAsync(
-        ChatCompletionRequest request, 
+        GrokChatCompletionRequest request, 
         CancellationToken cancellationToken
         )
     {
@@ -202,7 +202,7 @@ public class ChatCompletionChunk
     ///     Usage statistics (optional).
     /// </summary>
     [JsonProperty("usage", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
-    public Usage? Usage { get; set; }
+    public GrokUsage? Usage { get; set; }
 
     /// <summary>
     ///     Unique identifier for the system configuration (optional).

@@ -16,14 +16,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ChatCompletionRequest'
+              $ref: '#/components/schemas/GrokChatCompletionRequest'
       responses:
         '200':
           description: Successful chat completion response
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatCompletionResponse'
+                $ref: '#/components/schemas/GrokChatCompletionResponse'
             text/event-stream:
               schema:
                 type: string
@@ -39,16 +39,16 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorResponse'
+                $ref: '#/components/schemas/GrokErrorResponse'
 components:
   schemas:
-    ChatCompletionRequest:
+    GrokChatCompletionRequest:
       type: object
       properties:
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/Message'
+            $ref: '#/components/schemas/GrokMessage'
           description: List of messages in the conversation
         model:
           type: string
@@ -68,7 +68,7 @@ components:
         tools:
           type: array
           items:
-            $ref: '#/components/schemas/Tool'
+            $ref: '#/components/schemas/GrokTool'
           description: List of tools (functions) available to the model
         tool_choice:
           oneOf:
@@ -99,7 +99,7 @@ components:
         - messages
         - model
 
-    Message:
+    GrokMessage:
       type: object
       properties:
         role:
@@ -110,60 +110,59 @@ components:
       discriminator:
         propertyName: role
         mapping:
-          system: '#/components/schemas/SystemMessage'
-          user: '#/components/schemas/UserMessage'
-          assistant: '#/components/schemas/AssistantMessage'
-          tool: '#/components/schemas/ToolMessage'
+          system: '#/components/schemas/GrokSystemMessage'
+          user: '#/components/schemas/GrokUserMessage'
+          assistant: '#/components/schemas/GrokAssistantMessage'
+          tool: '#/components/schemas/GrokToolMessage'
 
-    SystemMessage:
+    GrokSystemMessage:
       allOf:
-        - $ref: '#/components/schemas/Message'
+        - $ref: '#/components/schemas/GrokMessage'
         - type: object
           properties:
             content:
               type: string
-              description: The system message content
+              description: Simple text content for the system message
           required:
             - content
 
-    UserMessage:
+    GrokUserMessage:
       allOf:
-        - $ref: '#/components/schemas/Message'
+        - $ref: '#/components/schemas/GrokMessage'
         - type: object
           properties:
             content:
-              oneOf:
-                - type: string
-                  description: Text-only content
-                - type: array
-                  items:
-                    $ref: '#/components/schemas/ContentPart'
-                  description: Mixed text and image content
+              type: array
+              items:
+                $ref: '#/components/schemas/GrokContent'
+              description: Array of content parts (e.g., text, images)
           required:
             - content
 
-    AssistantMessage:
+    GrokAssistantMessage:
       allOf:
-        - $ref: '#/components/schemas/Message'
+        - $ref: '#/components/schemas/GrokMessage'
         - type: object
           properties:
             content:
               type: string
-              description: The assistant's response text; may be a JSON string for structured outputs with certain models
+              description: Simple text content; may be a JSON string for structured outputs
             tool_calls:
               type: array
               items:
-                $ref: '#/components/schemas/ToolCall'
+                $ref: '#/components/schemas/GrokToolCall'
               description: List of tool calls requested by the assistant
+          required:
+            - content
 
-    ToolMessage:
+    GrokToolMessage:
       allOf:
-        - $ref: '#/components/schemas/Message'
+        - $ref: '#/components/schemas/GrokMessage'
         - type: object
           properties:
             content:
               type: string
-              description: JSON string of the tool function’s result
+              description: Simple text content; typically a JSON string of the tool result
             tool_call_id:
               type: string
               description: ID of the tool call this result corresponds to
@@ -171,64 +170,69 @@ components:
             - content
             - tool_call_id
 
-    ContentPart:
-      oneOf:
-        - $ref: '#/components/schemas/TextPart'
-        - $ref: '#/components/schemas/ImageUrlPart'
+    GrokContent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: ["text", "image_url"]
+          description: The type of content part
+      required:
+        - type
       discriminator:
         propertyName: type
         mapping:
-          text: '#/components/schemas/TextPart'
-          image_url: '#/components/schemas/ImageUrlPart'
+          text: '#/components/schemas/GrokTextPart'
+          image_url: '#/components/schemas/GrokImageUrlPart'
+      description: Base type for content parts, with subtypes distinguished by the 'type' property
 
-    TextPart:
-      type: object
-      properties:
-        type:
-          type: string
-          enum: ["text"]
-        text:
-          type: string
-          description: Text content
-      required:
-        - type
-        - text
-
-    ImageUrlPart:
-      type: object
-      properties:
-        type:
-          type: string
-          enum: ["image_url"]
-        image_url:
-          type: object
+    GrokTextPart:
+      allOf:
+        - $ref: '#/components/schemas/GrokContent'
+        - type: object
           properties:
-            url:
+            text:
               type: string
-              description: URL or base64-encoded image (e.g., "data:image/jpeg;base64,<data>")
-            detail:
-              type: string
-              enum: ["low", "high"]
-              description: Image detail level
+              description: The text content
           required:
-            - url
-      required:
-        - type
-        - image_url
+            - text
+          description: A content part containing text
 
-    Tool:
+    GrokImageUrlPart:
+      allOf:
+        - $ref: '#/components/schemas/GrokContent'
+        - type: object
+          properties:
+            image_url:
+              type: object
+              properties:
+                url:
+                  type: string
+                  description: URL or base64-encoded image (e.g., "data:image/jpeg;base64,<data>")
+                detail:
+                  type: string
+                  enum: ["low", "high"]
+                  description: Level of detail for the image
+              required:
+                - url
+              description: Details of the image URL
+          required:
+            - image_url
+          description: A content part containing an image URL
+
+    GrokTool:
       type: object
       properties:
         type:
           type: string
           enum: ["function"]
         function:
-          $ref: '#/components/schemas/FunctionDefinition'
+          $ref: '#/components/schemas/GrokFunctionDefinition'
       required:
         - type
         - function
 
-    FunctionDefinition:
+    GrokFunctionDefinition:
       type: object
       properties:
         name:
@@ -245,7 +249,7 @@ components:
         - name
         - parameters
 
-    ToolCall:
+    GrokToolCall:
       type: object
       properties:
         id:
@@ -271,7 +275,7 @@ components:
         - type
         - function
 
-    ChatCompletionResponse:
+    GrokChatCompletionResponse:
       type: object
       properties:
         id:
@@ -293,10 +297,10 @@ components:
         choices:
           type: array
           items:
-            $ref: '#/components/schemas/Choice'
+            $ref: '#/components/schemas/GrokChoice'
           description: List of response choices
         usage:
-          $ref: '#/components/schemas/Usage'
+          $ref: '#/components/schemas/GrokUsage'
         system_fingerprint:
           type: string
           description: Unique identifier for the system configuration
@@ -309,7 +313,7 @@ components:
         - choices
         - usage
 
-    Choice:
+    GrokChoice:
       type: object
       properties:
         index:
@@ -317,7 +321,7 @@ components:
           description: Index of the choice
           example: 0
         message:
-          $ref: '#/components/schemas/AssistantMessage'
+          $ref: '#/components/schemas/GrokAssistantMessage'
         finish_reason:
           type: string
           enum: ["stop", "length", "error", "tool_calls"]
@@ -328,7 +332,7 @@ components:
         - message
         - finish_reason
 
-    Usage:
+    GrokUsage:
       type: object
       properties:
         prompt_tokens:
@@ -344,13 +348,13 @@ components:
           description: Total number of tokens used
           example: 33
         prompt_tokens_details:
-          $ref: '#/components/schemas/PromptTokensDetails'
+          $ref: '#/components/schemas/GrokPromptTokensDetails'
       required:
         - prompt_tokens
         - completion_tokens
         - total_tokens
 
-    PromptTokensDetails:
+    GrokPromptTokensDetails:
       type: object
       properties:
         text_tokens:
@@ -375,7 +379,7 @@ components:
         - image_tokens
         - cached_tokens
 
-    ErrorResponse:
+    GrokErrorResponse:
       type: object
       properties:
         error:

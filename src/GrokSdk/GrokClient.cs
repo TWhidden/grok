@@ -75,7 +75,7 @@ namespace GrokSdk
         /// </summary>
         /// <returns>Successful chat completion response</returns>
         /// <exception cref="GrokSdkException">A server side error occurred.</exception>
-        public virtual System.Threading.Tasks.Task<ChatCompletionResponse> CreateChatCompletionAsync(ChatCompletionRequest body)
+        public virtual System.Threading.Tasks.Task<GrokChatCompletionResponse> CreateChatCompletionAsync(GrokChatCompletionRequest body)
         {
             return CreateChatCompletionAsync(body, System.Threading.CancellationToken.None);
         }
@@ -86,7 +86,7 @@ namespace GrokSdk
         /// </summary>
         /// <returns>Successful chat completion response</returns>
         /// <exception cref="GrokSdkException">A server side error occurred.</exception>
-        public virtual async System.Threading.Tasks.Task<ChatCompletionResponse> CreateChatCompletionAsync(ChatCompletionRequest body, System.Threading.CancellationToken cancellationToken)
+        public virtual async System.Threading.Tasks.Task<GrokChatCompletionResponse> CreateChatCompletionAsync(GrokChatCompletionRequest body, System.Threading.CancellationToken cancellationToken)
         {
             if (body == null)
                 throw new System.ArgumentNullException("body");
@@ -134,7 +134,7 @@ namespace GrokSdk
                         var status_ = (int)response_.StatusCode;
                         if (status_ == 200)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ChatCompletionResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<GrokChatCompletionResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
@@ -144,12 +144,12 @@ namespace GrokSdk
                         else
                         if (status_ == 400)
                         {
-                            var objectResponse_ = await ReadObjectResponseAsync<ErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            var objectResponse_ = await ReadObjectResponseAsync<GrokErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
                             if (objectResponse_.Object == null)
                             {
                                 throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
                             }
-                            throw new GrokSdkException<ErrorResponse>("Invalid request (e.g., missing messages)", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                            throw new GrokSdkException<GrokErrorResponse>("Invalid request (e.g., missing messages)", status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
                         }
                         else
                         {
@@ -284,14 +284,14 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ChatCompletionRequest
+    public partial class GrokChatCompletionRequest
     {
         /// <summary>
         /// List of messages in the conversation
         /// </summary>
         [Newtonsoft.Json.JsonProperty("messages", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
-        public System.Collections.Generic.ICollection<Message> Messages { get; set; } = new System.Collections.ObjectModel.Collection<Message>();
+        public System.Collections.Generic.ICollection<GrokMessage> Messages { get; set; } = new System.Collections.ObjectModel.Collection<GrokMessage>();
 
         /// <summary>
         /// The Grok model to use (e.g., grok-2-latest)
@@ -317,7 +317,7 @@ namespace GrokSdk
         /// List of tools (functions) available to the model
         /// </summary>
         [Newtonsoft.Json.JsonProperty("tools", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Collections.Generic.ICollection<Tool> Tools { get; set; }
+        public System.Collections.Generic.ICollection<GrokTool> Tools { get; set; }
 
         /// <summary>
         /// Controls tool usage. Set to null or omit when no tools are provided.
@@ -343,12 +343,12 @@ namespace GrokSdk
     }
 
     [Newtonsoft.Json.JsonConverter(typeof(JsonInheritanceConverter), "role")]
-    [JsonInheritanceAttribute("system", typeof(SystemMessage))]
-    [JsonInheritanceAttribute("user", typeof(UserMessage))]
-    [JsonInheritanceAttribute("assistant", typeof(AssistantMessage))]
-    [JsonInheritanceAttribute("tool", typeof(ToolMessage))]
+    [JsonInheritanceAttribute("system", typeof(GrokSystemMessage))]
+    [JsonInheritanceAttribute("user", typeof(GrokUserMessage))]
+    [JsonInheritanceAttribute("assistant", typeof(GrokAssistantMessage))]
+    [JsonInheritanceAttribute("tool", typeof(GrokToolMessage))]
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Message
+    public partial class GrokMessage
     {
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
@@ -363,10 +363,10 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class SystemMessage : Message
+    public partial class GrokSystemMessage : GrokMessage
     {
         /// <summary>
-        /// The system message content
+        /// Simple text content for the system message
         /// </summary>
         [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -375,36 +375,40 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class UserMessage : Message
+    public partial class GrokUserMessage : GrokMessage
     {
+        /// <summary>
+        /// Array of content parts (e.g., text, images)
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        public string Content { get; set; }
+        [System.ComponentModel.DataAnnotations.Required]
+        public System.Collections.Generic.ICollection<GrokContent> Content { get; set; } = new System.Collections.ObjectModel.Collection<GrokContent>();
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class AssistantMessage : Message
+    public partial class GrokAssistantMessage : GrokMessage
     {
         /// <summary>
-        /// The assistant's response text; may be a JSON string for structured outputs with certain models
+        /// Simple text content; may be a JSON string for structured outputs
         /// </summary>
-        [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Content { get; set; }
 
         /// <summary>
         /// List of tool calls requested by the assistant
         /// </summary>
         [Newtonsoft.Json.JsonProperty("tool_calls", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public System.Collections.Generic.ICollection<ToolCall> Tool_calls { get; set; }
+        public System.Collections.Generic.ICollection<GrokToolCall> Tool_calls { get; set; }
 
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ToolMessage : Message
+    public partial class GrokToolMessage : GrokMessage
     {
         /// <summary>
-        /// JSON string of the tool function’s result
+        /// Simple text content; typically a JSON string of the tool result
         /// </summary>
         [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
@@ -419,66 +423,68 @@ namespace GrokSdk
 
     }
 
+    /// <summary>
+    /// Base type for content parts, with subtypes distinguished by the 'type' property
+    /// </summary>
+    [Newtonsoft.Json.JsonConverter(typeof(JsonInheritanceConverter), "type")]
+    [JsonInheritanceAttribute("text", typeof(GrokTextPart))]
+    [JsonInheritanceAttribute("image_url", typeof(GrokImageUrlPart))]
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ContentPart
+    public partial class GrokContent
     {
-        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-        public ContentPartType Type { get; set; }
 
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    /// <summary>
+    /// A content part containing text
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GrokTextPart : GrokContent
+    {
         /// <summary>
-        /// Text content
+        /// The text content
         /// </summary>
         [Newtonsoft.Json.JsonProperty("text", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         public string Text { get; set; }
 
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
     }
 
+    /// <summary>
+    /// A content part containing an image URL
+    /// </summary>
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ImageUrlPart
+    public partial class GrokImageUrlPart : GrokContent
     {
-        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
-        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
-        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-        public ImageUrlPartType Type { get; set; }
-
+        /// <summary>
+        /// Details of the image URL
+        /// </summary>
         [Newtonsoft.Json.JsonProperty("image_url", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
         public Image_url Image_url { get; set; } = new Image_url();
 
-        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
-
-        [Newtonsoft.Json.JsonExtensionData]
-        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
-        {
-            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
-            set { _additionalProperties = value; }
-        }
-
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Tool
+    public partial class GrokTool
     {
         [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-        public ToolType Type { get; set; }
+        public GrokToolType Type { get; set; }
 
         [Newtonsoft.Json.JsonProperty("function", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
-        public FunctionDefinition Function { get; set; } = new FunctionDefinition();
+        public GrokFunctionDefinition Function { get; set; } = new GrokFunctionDefinition();
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -492,7 +498,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class FunctionDefinition
+    public partial class GrokFunctionDefinition
     {
         /// <summary>
         /// Name of the function
@@ -526,7 +532,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ToolCall
+    public partial class GrokToolCall
     {
         /// <summary>
         /// Unique identifier for the tool call
@@ -538,7 +544,7 @@ namespace GrokSdk
         [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-        public ToolCallType Type { get; set; }
+        public GrokToolCallType Type { get; set; }
 
         [Newtonsoft.Json.JsonProperty("function", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
@@ -556,7 +562,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ChatCompletionResponse
+    public partial class GrokChatCompletionResponse
     {
         /// <summary>
         /// Unique identifier for the completion
@@ -590,11 +596,11 @@ namespace GrokSdk
         /// </summary>
         [Newtonsoft.Json.JsonProperty("choices", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
-        public System.Collections.Generic.ICollection<Choice> Choices { get; set; } = new System.Collections.ObjectModel.Collection<Choice>();
+        public System.Collections.Generic.ICollection<GrokChoice> Choices { get; set; } = new System.Collections.ObjectModel.Collection<GrokChoice>();
 
         [Newtonsoft.Json.JsonProperty("usage", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
-        public Usage Usage { get; set; } = new Usage();
+        public GrokUsage Usage { get; set; } = new GrokUsage();
 
         /// <summary>
         /// Unique identifier for the system configuration
@@ -614,7 +620,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Choice
+    public partial class GrokChoice
     {
         /// <summary>
         /// Index of the choice
@@ -624,7 +630,7 @@ namespace GrokSdk
 
         [Newtonsoft.Json.JsonProperty("message", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required]
-        public AssistantMessage Message { get; set; }
+        public GrokAssistantMessage Message { get; set; }
 
         /// <summary>
         /// Reason the completion stopped
@@ -632,7 +638,7 @@ namespace GrokSdk
         [Newtonsoft.Json.JsonProperty("finish_reason", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
-        public ChoiceFinish_reason Finish_reason { get; set; }
+        public GrokChoiceFinish_reason Finish_reason { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -646,7 +652,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class Usage
+    public partial class GrokUsage
     {
         /// <summary>
         /// Number of tokens in the prompt
@@ -667,7 +673,7 @@ namespace GrokSdk
         public int Total_tokens { get; set; }
 
         [Newtonsoft.Json.JsonProperty("prompt_tokens_details", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public PromptTokensDetails Prompt_tokens_details { get; set; }
+        public GrokPromptTokensDetails Prompt_tokens_details { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -681,7 +687,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class PromptTokensDetails
+    public partial class GrokPromptTokensDetails
     {
         /// <summary>
         /// Number of text tokens in the prompt
@@ -719,7 +725,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public partial class ErrorResponse
+    public partial class GrokErrorResponse
     {
         /// <summary>
         /// Error message
@@ -755,24 +761,6 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ContentPartType
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"text")]
-        Text = 0,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ImageUrlPartType
-    {
-
-        [System.Runtime.Serialization.EnumMember(Value = @"image_url")]
-        Image_url = 0,
-
-    }
-
-    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class Image_url
     {
         /// <summary>
@@ -783,7 +771,7 @@ namespace GrokSdk
         public string Url { get; set; }
 
         /// <summary>
-        /// Image detail level
+        /// Level of detail for the image
         /// </summary>
         [Newtonsoft.Json.JsonProperty("detail", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
@@ -801,7 +789,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ToolType
+    public enum GrokToolType
     {
 
         [System.Runtime.Serialization.EnumMember(Value = @"function")]
@@ -810,7 +798,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ToolCallType
+    public enum GrokToolCallType
     {
 
         [System.Runtime.Serialization.EnumMember(Value = @"function")]
@@ -847,7 +835,7 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
-    public enum ChoiceFinish_reason
+    public enum GrokChoiceFinish_reason
     {
 
         [System.Runtime.Serialization.EnumMember(Value = @"stop")]
