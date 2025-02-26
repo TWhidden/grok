@@ -44,6 +44,16 @@ public record GrokStreamState(StreamState StreamState) : GrokMessageBase
 }
 
 /// <summary>
+/// When a tool executes, the response is passed back to Grok, but this will allow additional usage.
+/// </summary>
+/// <param name="ToolName">Name of the tool that returned</param>
+/// <param name="ToolResponse">The raw response from the tool being passed back to Grok</param>
+public record GrokToolResponse(string ToolName, string ToolResponse) : GrokMessageBase
+{
+
+}
+
+/// <summary>
 /// Manages the conversation thread with Grok, handling messages and tool calls.
 /// </summary>
 public class GrokThread(GrokClient client)
@@ -175,10 +185,15 @@ public class GrokThread(GrokClient client)
                     if (_tools.TryGetValue(toolCall.Function.Name, out var tool))
                     {
                         channel.Writer.TryWrite(new GrokStreamState(StreamState.Streaming));
+
+                        // Execute the tool
                         string result = await tool.Execute(toolCall.Function.Arguments);
-                        
+
+                        // the channel reader may care about this raw data - it could be used in an outside resource like an image URL
+                        channel.Writer.TryWrite(new GrokToolResponse(toolCall.Function.Name, result));
+
+                        // Respond to Grok accordingly
                         _history.Add(new GrokToolMessage { Content = result, Tool_call_id = toolCall.Id });
-                        
                     }
                     else
                     {
