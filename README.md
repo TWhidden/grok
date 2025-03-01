@@ -24,7 +24,7 @@ Dependencies:
 
 `GrokThread` powers this library, enabling multi-turn conversations, tool execution, and asynchronous streaming. Below is a console chat example featuring an image generation tool:
 
-```
+```csharp
 using GrokSdk;
 
 namespace GrokConsoleTest;
@@ -200,7 +200,7 @@ internal static class ImageGeneratorHelper
 ## Additional Examples
 
 ### Simple Chat
-```
+```csharp
 var thread = new GrokThread(new GrokClient(new HttpClient(), "your-api-key-here"));
 thread.AddSystemInstruction("You are a helpful assistant.");
 await foreach (var response in thread.AskQuestion("Hello!"))
@@ -218,14 +218,14 @@ The `ImageGeneratorHelper` above shows how to integrate a tool that generates im
 
 ### GrokClient
 Sets up the API connection:
-```
+```csharp
 var client = new GrokClient(new HttpClient(), "your-api-key-here");
 var thread = client.GetGrokThread();
 ```
 
 ### GrokStreamingClient
 For low-level streaming:
-```
+```csharp
 var streamingClient = client.GetStreamingClient();
 streamingClient.OnChunkReceived += (s, chunk) => Console.Write(chunk.Choices[0].Delta.Content);
 await streamingClient.StartStreamAsync(new ChatCompletionRequest { /* ... */ });
