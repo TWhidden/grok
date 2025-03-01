@@ -3,14 +3,14 @@
 namespace GrokSdk;
 
 /// <summary>
-/// Base message type for different kinds of responses, nullable enabled
+///     Base message type for different kinds of responses, nullable enabled
 /// </summary>
 public abstract record GrokMessageBase
 {
 }
 
 /// <summary>
-/// Text message type inheriting from GrokMessage
+///     Text message type inheriting from GrokMessage
 /// </summary>
 /// <param name="Message"></param>
 public record GrokTextMessage(string Message) : GrokMessageBase
@@ -18,7 +18,7 @@ public record GrokTextMessage(string Message) : GrokMessageBase
 }
 
 /// <summary>
-/// Service based messages from Grok
+///     Service based messages from Grok
 /// </summary>
 /// <param name="Message"></param>
 public record GrokServiceMessage(string Message) : GrokMessageBase
@@ -26,35 +26,32 @@ public record GrokServiceMessage(string Message) : GrokMessageBase
 }
 
 /// <summary>
-/// Exception handle indicating a failure occured
+///     Exception handle indicating a failure occured
 /// </summary>
 /// <param name="Exception"></param>
 public record GrokError(Exception Exception) : GrokMessageBase
 {
-
 }
 
 /// <summary>
-/// The State of the stream
+///     The State of the stream
 /// </summary>
 /// <param name="StreamState"></param>
 public record GrokStreamState(StreamState StreamState) : GrokMessageBase
 {
-
 }
 
 /// <summary>
-/// When a tool executes, the response is passed back to Grok, but this will allow additional usage.
+///     When a tool executes, the response is passed back to Grok, but this will allow additional usage.
 /// </summary>
 /// <param name="ToolName">Name of the tool that returned</param>
 /// <param name="ToolResponse">The raw response from the tool being passed back to Grok</param>
 public record GrokToolResponse(string ToolName, string ToolResponse) : GrokMessageBase
 {
-
 }
 
 /// <summary>
-/// Manages the conversation thread with Grok, handling messages and tool calls.
+///     Manages the conversation thread with Grok, handling messages and tool calls.
 /// </summary>
 public class GrokThread(GrokClient client)
 {
@@ -64,29 +61,31 @@ public class GrokThread(GrokClient client)
     private string? _lastSystemInstruction;
 
     /// <summary>
-    /// Provide instruction to the system on how it should respond to the user.
+    /// View into the History data backing the chat.
+    /// </summary>
+    public IReadOnlyCollection<GrokMessage> History => _history;
+
+    /// <summary>
+    ///     Provide instruction to the system on how it should respond to the user.
     /// </summary>
     /// <param name="systemInstruction">The instruction systemInstruction to add.</param>
     public void AddSystemInstruction(string? systemInstruction)
     {
         _lastSystemInstruction = systemInstruction;
-        if (systemInstruction != null)
-        {
-            _history.Add(new GrokSystemMessage { Content = systemInstruction });
-        }
+        if (systemInstruction != null) _history.Add(new GrokSystemMessage { Content = systemInstruction });
     }
 
     /// <summary>
-    /// Add to the History without having an API call. Next API hit will include this in the context
+    ///     Add to the History without having an API call. Next API hit will include this in the context
     /// </summary>
     /// <param name="message">User message to include on the next call</param>
     public void AddUserMessage(string message)
     {
-        _history.Add(new GrokUserMessage()
+        _history.Add(new GrokUserMessage
         {
             Content =
             [
-                new GrokTextPart()
+                new GrokTextPart
                 {
                     Text = message
                 }
@@ -95,12 +94,15 @@ public class GrokThread(GrokClient client)
     }
 
     /// <summary>
-    /// Takes the all the History data and compresses to reduce token consumption but still keeps context.
+    ///     Takes the all the History data and compresses to reduce token consumption but still keeps context.
     /// </summary>
     /// <param name="compressPrompt">Alternate Prompt that may be better at compressing data efficiently</param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    public async Task CompressHistoryAsync(string compressPrompt = "Summarize this chat history into a single item that captures the main context. Return to me that compressed chat.", CancellationToken cancellationToken = default)
+    public async Task CompressHistoryAsync(
+        string compressPrompt =
+            "Summarize this chat history into a single item that captures the main context. Return to me that compressed chat.",
+        CancellationToken cancellationToken = default)
     {
         await foreach (var messageResponse in AskQuestion(compressPrompt, cancellationToken: cancellationToken))
         {
@@ -113,7 +115,7 @@ public class GrokThread(GrokClient client)
     }
 
     /// <summary>
-    /// Registers a tool with the thread, making it available for Grok to use.
+    ///     Registers a tool with the thread, making it available for Grok to use.
     /// </summary>
     /// <param name="tool">The tool definition to register.</param>
     public void RegisterTool(GrokToolDefinition tool)
@@ -132,11 +134,10 @@ public class GrokThread(GrokClient client)
         if (!_tools.TryAdd(tool.Name, tool))
             throw new ArgumentException($"A tool with name '{tool.Name}' already exists.");
 #endif
-
     }
 
     /// <summary>
-    /// Asks a question and processes the response, providing status updates and results via an IAsyncEnumerable.
+    ///     Asks a question and processes the response, providing status updates and results via an IAsyncEnumerable.
     /// </summary>
     /// <param name="question">The question to ask.</param>
     /// <param name="files">Files to do an analysis on (optional).</param>
@@ -155,7 +156,7 @@ public class GrokThread(GrokClient client)
         if (string.IsNullOrEmpty(question))
             throw new ArgumentException("Question cannot be null or empty.", nameof(question));
 
-        _history.Add(new GrokUserMessage { Content = [new GrokTextPart(){Text = question }]});
+        _history.Add(new GrokUserMessage { Content = [new GrokTextPart { Text = question }] });
 
         var channel = Channel.CreateUnbounded<GrokMessageBase>();
 
@@ -177,7 +178,7 @@ public class GrokThread(GrokClient client)
     }
 
     /// <summary>
-    /// Processes the conversation by handling tool calls and sending the final response.
+    ///     Processes the conversation by handling tool calls and sending the final response.
     /// </summary>
     /// <param name="model">The model to use.</param>
     /// <param name="temperature">The temperature for response generation.</param>
@@ -189,7 +190,7 @@ public class GrokThread(GrokClient client)
         Channel<GrokMessageBase> channel,
         CancellationToken cancellationToken)
     {
-        bool toolCallsPending = true;
+        var toolCallsPending = true;
 
         while (toolCallsPending)
         {
@@ -202,16 +203,18 @@ public class GrokThread(GrokClient client)
                 Model = model,
                 Temperature = temperature,
                 Stream = false, // Always non-streaming
-                Tools = _tools.Any() ? _tools.Values.Select(t => new GrokTool
-                {
-                    Type = GrokToolType.Function,
-                    Function = new GrokFunctionDefinition
+                Tools = _tools.Any()
+                    ? _tools.Values.Select(t => new GrokTool
                     {
-                        Name = t.Name,
-                        Description = t.Description,
-                        Parameters = t.Parameters
-                    }
-                }).ToList() : null,
+                        Type = GrokToolType.Function,
+                        Function = new GrokFunctionDefinition
+                        {
+                            Name = t.Name,
+                            Description = t.Description,
+                            Parameters = t.Parameters
+                        }
+                    }).ToList()
+                    : null,
                 Tool_choice = _tools.Any() ? Tool_choice.Auto : null
             };
 
@@ -222,13 +225,12 @@ public class GrokThread(GrokClient client)
             if (choice.Message.Tool_calls?.Count > 0)
             {
                 foreach (var toolCall in choice.Message.Tool_calls)
-                {
                     if (_tools.TryGetValue(toolCall.Function.Name, out var tool))
                     {
                         channel.Writer.TryWrite(new GrokStreamState(StreamState.Streaming));
 
                         // Execute the tool
-                        string result = await tool.Execute(toolCall.Function.Arguments);
+                        var result = await tool.Execute(toolCall.Function.Arguments);
 
                         // the channel reader may care about this raw data - it could be used in an outside resource like an image URL
                         channel.Writer.TryWrite(new GrokToolResponse(toolCall.Function.Name, result));
@@ -240,13 +242,12 @@ public class GrokThread(GrokClient client)
                     {
                         throw new InvalidOperationException($"Tool '{toolCall.Function.Name}' not found.");
                     }
-                }
             }
             else
             {
                 toolCallsPending = false;
                 _history.Add(choice.Message);
-                
+
                 // Send the final response to the channel
                 channel.Writer.TryWrite(new GrokTextMessage(choice.Message.Content));
                 channel.Writer.TryWrite(new GrokStreamState(StreamState.Done));

@@ -245,4 +245,4 @@ Visit [GitHub](https://github.com/twhidden/grok):
 
 ## License
 
-MIT License. See [LICENSE](LICENSE).
+This project is licensed under the MIT License, free for everyone to use, modify, and distribute with no cost or warranty
