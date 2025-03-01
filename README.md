@@ -6,313 +6,243 @@
 [![.NET 8.0](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/)
 [![.NET Standard 2.0](https://img.shields.io/badge/.NET%20Standard-2.0-blue.svg)](https://dotnet.microsoft.com/en-us/platform/dotnet-standard)
 
-An unofficial .NET library for interacting with Grok's API. This library enables developers to create chat completions with Grok’s API seamlessly in .NET applications, now with enhanced type safety using specific message classes and support for streaming responses.
+An unofficial .NET library for interacting with Grok's API, with `GrokThread` as its centerpiece. This library streamlines conversation management, tool integration (e.g., image generation), and real-time streaming in .NET applications.
 
 ## Installation
 
-Install the library via NuGet by running the following command in your project directory:
+Install via NuGet:
 
-```bash
+```
 dotnet add package GrokSdk
 ```
 
-Ensure you have the following dependencies in your project:
+Dependencies:
 - `Newtonsoft.Json` (v13.0.0.0 or compatible) for JSON serialization.
 - .NET-compatible `HttpClient` (e.g., from `System.Net.Http`).
 
-## Usage
+## Core Feature: GrokThread
 
-The library provides a `GrokClient` class to interact with Grok’s API. Below are examples demonstrating authentication, chat completions, conversation context, command-based interactions, streaming responses, and tool choice usage.
+`GrokThread` powers this library, enabling multi-turn conversations, tool execution, and asynchronous streaming. Below is a console chat example featuring an image generation tool:
 
-### Authentication
-
-Initialize `GrokClient` with an `HttpClient` instance and your Grok API key:
-
-```csharp
+```
 using GrokSdk;
 
-var httpClient = new HttpClient();
-var client = new GrokClient(httpClient, "your-api-key-here");
-```
+namespace GrokConsoleTest;
 
->**Note:** The API key is required and must be provided during instantiation. A `null` API key will throw an `ArgumentNullException`.
-
-The default base URL is set to `https://api.x.ai/v1`, but you can modify it using the `BaseUrl` property if needed:
-
-```csharp
-client.BaseUrl = "https://custom-api-endpoint.com/v1/";
-```
-
-### Creating a Chat Completion
-
-Here’s how to create a chat completion using specific message types:
-
-```csharp
-using System.Collections.ObjectModel;
-
-var request = new ChatCompletionRequest
+internal class Program
 {
-    Messages = new Collection<Message>
+    private static async Task Main(string[] args)
     {
-        new SystemMessage { Content = "You are a helpful assistant." },
-        new UserMessage { Content = "Say hello world." }
-    },
-    Model = "grok-2-latest",
-    Stream = false,
-    Temperature = 0f
-};
+        // Initialize HTTP client and GrokClient
+        var httpClient = new HttpClient();
+        var sdk = new GrokClient(httpClient, "your-api-key-here"); // Replace with your API key
 
-try
-{
-    var response = await client.CreateChatCompletionAsync(request);
-    Console.WriteLine(response.Choices[0].Message.Content); // Outputs the assistant's response
-}
-catch (GrokSdkException ex)
-{
-    Console.WriteLine($"Error {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
-}
-```
+        // Create GrokThread to manage the conversation
+        var thread = new GrokThread(sdk);
 
-#### Key Classes and Properties
-- **`ChatCompletionRequest`**:
-  - `Messages`: A collection of `Message` objects (required). Use specific types like `SystemMessage`, `UserMessage`, `AssistantMessage`, or `ToolMessage`.
-  - `Model`: The Grok model (e.g., `"grok-2-latest"`) (required).
-  - `Stream`: Boolean to enable streaming (default: `false`).
-  - `Temperature`: Controls randomness (0 to 2, default: 0).
-  - `Tools`: Optional collection of `Tool` objects for function calling.
-  - `Tool_choice`: Controls tool usage (`"auto"`, `"required"`, `"none"`, or a specific function).
+        // Define Grok's behavior with system instructions
+        thread.AddSystemInstruction("This is a console chat bot for testing communications with Grok");
 
-- **`Message`**:
-  - Specific types: `SystemMessage`, `UserMessage`, `AssistantMessage`, `ToolMessage`, each with a `Content` property (and additional properties like `Tool_calls` for `AssistantMessage` or `Tool_call_id` for `ToolMessage`).
+        // Show welcome message
+        Console.WriteLine("Welcome to the Grok Chat Console. Type your questions below. Type 'quit' to exit.");
 
-- **`ChatCompletionResponse`**:
-  - `Id`: Unique completion ID.
-  - `Choices`: List of response options (each with a `Message` and `Finish_reason`).
-  - `Usage`: Token usage details (e.g., `Prompt_tokens`, `Completion_tokens`).
+        // Register an image generation tool
+        thread.RegisterTool(new GrokToolDefinition(
+            ImageGeneratorHelper.GrokToolName,
+            "Generate images based on user input request;",
+            ImageGeneratorHelper.GrokArgsRequest,
+            ImageGeneratorHelper.ProcessGrokRequestForImage));
 
-### Maintaining Conversation Context
+        // Preload context with neutral discussion (non-API processed)
+        thread.AddUserMessage("Alex Said: I tried a new coffee shop today.");
+        thread.AddUserMessage("Sam Said: Nice! How was the coffee?");
+        thread.AddUserMessage("Alex Said: Really good, I might go back tomorrow.");
+        await thread.CompressHistoryAsync(); // Compress history to save tokens
 
-The library supports multi-turn conversations by passing the full message history using specific message types:
-
-```csharp
-var messages = new Collection<Message>
-{
-    new SystemMessage { Content = "You are Grok, a helpful assistant." },
-    new UserMessage { Content = "My name is TestUser. Remember that." }
-};
-
-var request1 = new ChatCompletionRequest
-{
-    Messages = messages,
-    Model = "grok-2-latest",
-    Stream = false,
-    Temperature = 0f
-};
-
-var response1 = await client.CreateChatCompletionAsync(request1);
-messages.Add(new AssistantMessage { Content = response1.Choices[0].Message.Content });
-
-messages.Add(new UserMessage { Content = "What is my name?" });
-var request2 = new ChatCompletionRequest
-{
-    Messages = messages,
-    Model = "grok-2-latest",
-    Stream = false,
-    Temperature = 0f
-};
-
-var response2 = await client.CreateChatCompletionAsync(request2);
-Console.WriteLine(response2.Choices[0].Message.Content); // Should recall "TestUser"
-```
-
-### Command-Based Interaction
-
-You can instruct Grok to respond to commands, such as generating a roast:
-
-```csharp
-var request = new ChatCompletionRequest
-{
-    Messages = new Collection<Message>
-    {
-        new SystemMessage { Content = "You are a bot that responds to commands. When given '/roast \"name\"', generate a funny roast." },
-        new UserMessage { Content = "/roast \"Dave\"" }
-    },
-    Model = "grok-2-latest",
-    Stream = false,
-    Temperature = 0f
-};
-
-var response = await client.CreateChatCompletionAsync(request);
-Console.WriteLine(response.Choices[0].Message.Content); // Outputs a roast for "Dave"
-```
-
-### Streaming Client Example
-
-The library supports streaming responses for real-time interactions using `GrokStreamingClient`:
-
-```csharp
-var streamingClient = client.GetStreamingClient();
-
-streamingClient.OnStreamStarted += (s, e) => Console.WriteLine("Stream started.");
-streamingClient.OnChunkReceived += (s, chunk) =>
-{
-    if (chunk.Choices[0].Delta.Content != null)
-    {
-        Console.Write(chunk.Choices[0].Delta.Content);
-    }
-};
-streamingClient.OnStreamCompleted += (s, e) => Console.WriteLine("\nStream completed.");
-streamingClient.OnStreamError += (s, ex) => Console.WriteLine($"Error: {ex.Message}");
-streamingClient.OnStateChanged += (s, state) => Console.WriteLine($"State changed to: {state}");
-
-var request = new ChatCompletionRequest
-{
-    Messages = new Collection<Message>
-    {
-        new SystemMessage { Content = "You are a helpful assistant." },
-        new UserMessage { Content = "Tell me a short story." }
-    },
-    Model = "grok-2-latest",
-    Stream = true,
-    Temperature = 0f
-};
-
-await streamingClient.StartStreamAsync(request);
-```
-
-In this example:
-- `OnStreamStarted`: Triggered when the stream begins.
-- `OnChunkReceived`: Triggered for each chunk, allowing real-time display of the assistant’s reply.
-- `OnStreamCompleted`: Triggered when the stream ends successfully.
-- `OnStreamError`: Triggered if an error occurs.
-- `OnStateChanged`: Tracks state changes (e.g., `Thinking`, `Streaming`, `Done`, `Error`).
-
->**Note:** The `Stream` property in the request must be `true` for streaming. `StartStreamAsync` enforces this automatically.
-
-### Tool Choice Example
-
-The library supports function calling with `tool_choice` to integrate external tools. Here’s an example where the user asks how many Starlink satellites are active, and the tool queries the N2YO API to fetch and count Starlink satellites above a location:
-
-```csharp
-using Newtonsoft.Json;
-
-var httpClient = new HttpClient();
-var client = new GrokClient(httpClient, _apiToken ?? throw new Exception("API Token not set"));
-
-var messages = new Collection<Message>
-{
-    new SystemMessage { Content = "You are an assistant with access to satellite data tools." },
-    new UserMessage { Content = "How many Starlink satellites are out there? Category Code 52" }
-};
-
-// Define a tool to count Starlink satellites
-var tools = new Collection<Tool>
-{
-    new Tool
-    {
-        Type = ToolType.Function,
-        Function = new FunctionDefinition
+        // Main interaction loop
+        while (true)
         {
-            Name = "get_satellite_data",
-            Description = "Get the satellite data from n2yo website using the category code",
-            Parameters = new
+            // Prompt user with green text
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write("You: ");
+            Console.ResetColor();
+            var input = Console.ReadLine();
+
+            // Exit on 'quit' or empty input
+            if (string.IsNullOrWhiteSpace(input) || input.ToLower() == "quit") break;
+
+            try
             {
-                type = "object",
-                properties = new
+                // Stream responses for the user's question
+                var messages = thread.AskQuestion(input);
+                await foreach (var message in messages)
                 {
-                    categoryCode = new
+                    if (message is GrokStreamState state)
                     {
-                        type = "number",
-                        description =
-                            "The Category Code for n2yo website for a specific company (such as Starlink 52)"
+                        // Display state updates with colors
+                        switch (state.StreamState)
+                        {
+                            case StreamState.Thinking:
+                                Console.ForegroundColor = ConsoleColor.Yellow;
+                                Console.WriteLine("Thinking...");
+                                break;
+                            case StreamState.Streaming:
+                                Console.ForegroundColor = ConsoleColor.Cyan;
+                                Console.WriteLine("Streaming...");
+                                break;
+                            case StreamState.Done:
+                                Console.ForegroundColor = ConsoleColor.Green;
+                                Console.WriteLine("Done processing...");
+                                break;
+                            case StreamState.Error:
+                                Console.ForegroundColor = ConsoleColor.Red;
+                                Console.WriteLine("Error Processing...");
+                                break;
+                        }
+                        Console.ResetColor();
                     }
-                },
-                required = new[] { "categoryCode" }
+                    else if (message is GrokTextMessage textMessage)
+                    {
+                        // Stream text responses in blue
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                        Console.Write(textMessage.Message);
+                    }
+                    else if (message is GrokToolResponse toolResponse)
+                    {
+                        // Handle tool output (e.g., image URL)
+                        if (toolResponse.ToolName == ImageGeneratorHelper.GrokToolName)
+                        {
+                            Console.ForegroundColor = ConsoleColor.Magenta;
+                            Console.WriteLine($"Image URL: {toolResponse.ToolResponse}");
+                        }
+                    }
+                }
+                Console.ResetColor();
+                Console.WriteLine(); // New line after response
+            }
+            catch (Exception ex)
+            {
+                // Display errors in red
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"Error: {ex.Message}");
+                Console.ResetColor();
             }
         }
+
+        Console.WriteLine("Goodbye!");
     }
-};
+}
 
-// Step 1: Initial request to Grok
-var request = new ChatCompletionRequest
+// Image generation tool helper
+internal static class ImageGeneratorHelper
 {
-    Messages = messages,
-    Model = "grok-2-latest",
-    Stream = false,
-    Temperature = 0f,
-    Tools = tools,
-    Tool_choice = Tool_choice.Auto // Let Grok decide to use the tool
-};
+    private static readonly HttpClient httpClient = new();
 
-var response = await client.CreateChatCompletionAsync(request);
-var choice = response.Choices.First();
+    public static string GrokToolName = "image_generation";
 
-const int maxDataSetToGrok = 100;
-
-if (choice.Message.Tool_calls?.Count > 0)
-{
-    var toolCall = choice.Message.Tool_calls.First();
-    if (toolCall.Function.Name == "get_satellite_data")
+    public static object GrokArgsRequest = new
     {
-        // Step 2: Call N2YO API to get Starlink satellite count
-        var args = JsonConvert.DeserializeObject<Dictionary<string, int>>(toolCall.Function.Arguments);
-        var categoryCode = args["categoryCode"];
-
-        // Checked into the Test Classes if you want to snag it
-        var data = await SatelliteHelper.GetSatellitesAsync(categoryCode);
-
-        // Due to limits on the input of Grok (2 atm, we will limit the input to 100)
-        var reducedData = data.Take(maxDataSetToGrok);
-
-        var result = JsonConvert.SerializeObject(reducedData);
-
-        // Add assistant message and tool result
-        messages.Add(choice.Message);
-        messages.Add(new ToolMessage
+        type = "object",
+        properties = new
         {
-            Content = result,
-            Tool_call_id = toolCall.Id
-        });
-        
-        // Step 3: Send back to Grok
-        var followUpRequest = new ChatCompletionRequest
-        {
-            Messages = messages,
-            Model = "grok-2-latest",
-            Stream = false,
-            Temperature = 0f,
-            Tools = tools,
-            Tool_choice = Tool_choice.Auto
-        };
+            imageDescription = new
+            {
+                type = "string",
+                description = "The image description that will be used to generate an image"
+            }
+        },
+        required = new[] { "imageDescription" }
+    };
 
-        var finalResponse = await client.CreateChatCompletionAsync(followUpRequest);
-        Console.WriteLine(finalResponse.Choices.First().Message.Content); 
+    /// <summary>
+    /// Processes Grok's tool request and generates an image URL.
+    /// </summary>
+    public static async Task<string> ProcessGrokRequestForImage(string serializedRequest)
+    {
+        var args = JsonConvert.DeserializeObject<Dictionary<string, string>>(serializedRequest) ??
+                   throw new Exception("Could not process arguments from function");
+        var description = args["imageDescription"];
+        return await GenerateImageUrlAsync(description);
+    }
+
+    /// <summary>
+    /// Generates an image URL by sending a description to an external service.
+    /// </summary>
+    private static async Task<string> GenerateImageUrlAsync(string generationText)
+    {
+        if (generationText == null) throw new ArgumentNullException(nameof(generationText));
+
+        var url = "your-webhook-url-here"; // Replace with your webhook URL
+        var json = JsonSerializer.Serialize(new { ImageDescription = generationText });
+        var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+        var response = await httpClient.PostAsync(url, content);
+        if (!response.IsSuccessStatusCode)
+            throw new Exception($"POST request failed with status code {response.StatusCode}");
+
+        var responseString = await response.Content.ReadAsStringAsync();
+        var jsonResponse = JsonSerializer.Deserialize<Dictionary<string, string>>(responseString);
+        if (!jsonResponse.TryGetValue("image_url", out var imageUrl))
+            throw new Exception("Image URL not found in response");
+
+        return imageUrl;
     }
 }
 ```
 
-In this example:
-- The `get_satellite_data` tool queries N2YO website page, and parses the HTML (Did not see an API for getting all the data raw).
-- Grok triggers the tool with `Tool_choice.Auto`, passing category ID (we could make another lookup to find the category ID, but i knew Starlink was 52).
-- The tool fetches real-time data from N2YO, counts the returned satellites, and sends the result back to Grok.
-- The final response explains the count to the user, e.g., "There are X Starlink satellites out there."
+### Key Features of GrokThread
+- **Conversation Management**: Tracks history for context-aware responses.
+- **Tool Integration**: Executes custom tools like image generation (see above).
+- **Streaming**: Provides real-time updates via `IAsyncEnumerable`.
+- **Compression**: Shrinks history with `CompressHistoryAsync` to optimize tokens.
+- **State Tracking**: Monitors states (`Thinking`, `Streaming`, etc.) for feedback.
 
-_There seems to be a Grok limit with the amount of json returned back - maybe it would be better to have a smaller dataset retured back to Grok with the exact answer - but still really cool with the huge payload_
+## Additional Examples
 
-## Important Notes
+### Simple Chat
+```
+var thread = new GrokThread(new GrokClient(new HttpClient(), "your-api-key-here"));
+thread.AddSystemInstruction("You are a helpful assistant.");
+await foreach (var response in thread.AskQuestion("Hello!"))
+{
+    if (response is GrokTextMessage text) Console.WriteLine(text.Message);
+}
+```
 
-- **Swagger Generation:** Generated with NSwag v14.2.0.0 from a Grok-provided Swagger file. Since no official Swagger files were available, inaccuracies may exist. Refer to the [Grok API documentation](https://x.ai/api-docs) for official details.
-- **JSON Serialization:** Uses `Newtonsoft.Json` due to enum case sensitivity issues with `System.Text.Json`. A future switch to `System.Text.Json` is planned.
-- **Error Handling:** The library throws `GrokSdkException` for server-side errors (e.g., HTTP 400 for invalid requests). Check `StatusCode` and `Response` for details.
+### Tool Example: Image Generation
+The `ImageGeneratorHelper` above shows how to integrate a tool that generates images:
+- Ask: "Generate an image of a sunset."
+- Grok calls `image_generation`, which returns a URL from your webhook.
+
+## Supporting Classes
+
+### GrokClient
+Sets up the API connection:
+```
+var client = new GrokClient(new HttpClient(), "your-api-key-here");
+var thread = client.GetGrokThread();
+```
+
+### GrokStreamingClient
+For low-level streaming:
+```
+var streamingClient = client.GetStreamingClient();
+streamingClient.OnChunkReceived += (s, chunk) => Console.Write(chunk.Choices[0].Delta.Content);
+await streamingClient.StartStreamAsync(new ChatCompletionRequest { /* ... */ });
+```
+
+## Notes
+
+- **Swagger**: Built with NSwag v14.2.0.0. See [Grok API docs](https://x.ai/api-docs).
+- **Serialization**: Uses `Newtonsoft.Json` (planned switch to `System.Text.Json`).
+- **Errors**: Throws `GrokSdkException` with details.
 
 ## Contributing
 
-We’d love your input! To contribute:
-- Report issues or suggest features on the [GitHub repository](https://github.com/twhidden/grok).
-- Submit pull requests with enhancements or fixes.
-
-Please include tests (e.g., using MSTest as shown in `GrokClientTests`) to validate changes.
+Visit [GitHub](https://github.com/twhidden/grok):
+- Report issues or suggest features.
+- Submit pull requests with tests.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT License. See [LICENSE](LICENSE).

@@ -61,14 +61,55 @@ public class GrokThread(GrokClient client)
     private readonly GrokClient _client = client ?? throw new ArgumentNullException(nameof(client));
     private readonly List<GrokMessage> _history = new();
     private readonly Dictionary<string, GrokToolDefinition> _tools = new();
+    private string? _lastSystemInstruction;
 
     /// <summary>
     /// Provide instruction to the system on how it should respond to the user.
     /// </summary>
-    /// <param name="message">The instruction message to add.</param>
-    public void AddSystemInstruction(string message)
+    /// <param name="systemInstruction">The instruction systemInstruction to add.</param>
+    public void AddSystemInstruction(string? systemInstruction)
     {
-        _history.Add(new GrokSystemMessage { Content = message });
+        _lastSystemInstruction = systemInstruction;
+        if (systemInstruction != null)
+        {
+            _history.Add(new GrokSystemMessage { Content = systemInstruction });
+        }
+    }
+
+    /// <summary>
+    /// Add to the History without having an API call. Next API hit will include this in the context
+    /// </summary>
+    /// <param name="message">User message to include on the next call</param>
+    public void AddUserMessage(string message)
+    {
+        _history.Add(new GrokUserMessage()
+        {
+            Content =
+            [
+                new GrokTextPart()
+                {
+                    Text = message
+                }
+            ]
+        });
+    }
+
+    /// <summary>
+    /// Takes the all the History data and compresses to reduce token consumption but still keeps context.
+    /// </summary>
+    /// <param name="compressPrompt">Alternate Prompt that may be better at compressing data efficiently</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    public async Task CompressHistoryAsync(string compressPrompt = "Summarize this chat history into a single item that captures the main context. Return to me that compressed chat.", CancellationToken cancellationToken = default)
+    {
+        await foreach (var messageResponse in AskQuestion(compressPrompt, cancellationToken: cancellationToken))
+        {
+            if (messageResponse is not GrokTextMessage message) continue;
+            var compressedSummary = message.Message;
+            _history.Clear();
+            AddSystemInstruction(_lastSystemInstruction);
+            AddUserMessage(compressedSummary);
+        }
     }
 
     /// <summary>
