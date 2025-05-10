@@ -40,6 +40,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GrokErrorResponse'
+  /images/generations:
+    post:
+      summary: Generate images using Grok
+      operationId: generateImages
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrokImageGenerationRequest'
+      responses:
+        '200':
+          description: Successful image generation response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokImageGenerationResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokErrorResponse'
 components:
   schemas:
     GrokChatCompletionRequest:
@@ -388,6 +411,60 @@ components:
           example: "Invalid request: messages array is required"
       required:
         - error
+
+    GrokImageGenerationRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+          description: The text prompt to generate images from
+        n:
+          type: integer
+          description: The number of images to generate
+          default: 1
+          minimum: 1
+          maximum: 10
+        response_format:
+          type: string
+          enum:
+            - url
+            - b64_json
+          default: url
+          description: The format of the response, either "url" or "b64_json"
+        model:
+          type: string
+          description: The model to use for image generation
+          default: "grok-2-image-1212"
+      required:
+        - prompt
+    
+    GrokImageGenerationResponse:
+      type: object
+      properties:
+        created:
+          type: integer
+          description: Unix timestamp of when the response was created
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImageData'
+      required:
+        - data
+
+    ImageData:
+      type: object
+      properties:
+        url:
+          type: string
+          description: URL of the generated image (present if response_format is "url")
+        b64_json:
+          type: string
+          description: Base64-encoded image data (present if response_format is "b64_json")
+        revised_prompt:
+          type: string
+          description: The revised prompt used for image generation
+      required:
+        - revised_prompt
 
   securitySchemes:
     ApiKeyAuth:
