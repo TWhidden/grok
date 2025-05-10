@@ -73,6 +73,12 @@ namespace GrokSdk
         /// <summary>
         /// Create a chat completion with Grok
         /// </summary>
+        /// <remarks>
+        /// Generates a chat completion using the specified model. 
+        /// <br/>For reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta), 
+        /// <br/>use the `reasoning_effort` parameter to control thinking effort and access 
+        /// <br/>the reasoning trace via `reasoning_content` and token details via `completion_tokens_details`.
+        /// </remarks>
         /// <returns>Successful chat completion response</returns>
         /// <exception cref="GrokSdkException">A server side error occurred.</exception>
         public virtual System.Threading.Tasks.Task<GrokChatCompletionResponse> CreateChatCompletionAsync(GrokChatCompletionRequest body)
@@ -84,6 +90,12 @@ namespace GrokSdk
         /// <summary>
         /// Create a chat completion with Grok
         /// </summary>
+        /// <remarks>
+        /// Generates a chat completion using the specified model. 
+        /// <br/>For reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta), 
+        /// <br/>use the `reasoning_effort` parameter to control thinking effort and access 
+        /// <br/>the reasoning trace via `reasoning_content` and token details via `completion_tokens_details`.
+        /// </remarks>
         /// <returns>Successful chat completion response</returns>
         /// <exception cref="GrokSdkException">A server side error occurred.</exception>
         public virtual async System.Threading.Tasks.Task<GrokChatCompletionResponse> CreateChatCompletionAsync(GrokChatCompletionRequest body, System.Threading.CancellationToken cancellationToken)
@@ -432,6 +444,13 @@ namespace GrokSdk
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
         public Tool_choice? Tool_choice { get; set; }
 
+        /// <summary>
+        /// Controls how much time the model spends thinking before responding. Only applicable for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta). 'low' for quick responses, 'high' for complex reasoning.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("reasoning_effort", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public GrokChatCompletionRequestReasoning_effort? Reasoning_effort { get; set; }
+
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -502,6 +521,12 @@ namespace GrokSdk
         /// </summary>
         [Newtonsoft.Json.JsonProperty("tool_calls", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public System.Collections.Generic.ICollection<GrokToolCall> Tool_calls { get; set; }
+
+        /// <summary>
+        /// The model's thought process before generating the response. Only present for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("reasoning_content", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Reasoning_content { get; set; }
 
     }
 
@@ -776,6 +801,12 @@ namespace GrokSdk
         [Newtonsoft.Json.JsonProperty("prompt_tokens_details", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public GrokPromptTokensDetails Prompt_tokens_details { get; set; }
 
+        /// <summary>
+        /// Details about completion tokens, including reasoning tokens for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("completion_tokens_details", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public GrokCompletionTokensDetails Completion_tokens_details { get; set; }
+
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -813,6 +844,29 @@ namespace GrokSdk
         /// </summary>
         [Newtonsoft.Json.JsonProperty("cached_tokens", Required = Newtonsoft.Json.Required.Always)]
         public int Cached_tokens { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    /// <summary>
+    /// Breakdown of completion tokens, detailing tokens used for reasoning. Only present for reasoning-capable models.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GrokCompletionTokensDetails
+    {
+        /// <summary>
+        /// Number of tokens used for reasoning in the response.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("reasoning_tokens", Required = Newtonsoft.Json.Required.Always)]
+        public int Reasoning_tokens { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -956,6 +1010,18 @@ namespace GrokSdk
 
         [System.Runtime.Serialization.EnumMember(Value = @"none")]
         None = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.2.0.0 (NJsonSchema v11.1.0.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum GrokChatCompletionRequestReasoning_effort
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"low")]
+        Low = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"high")]
+        High = 1,
 
     }
 

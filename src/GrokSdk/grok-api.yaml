@@ -10,6 +10,11 @@ paths:
   /chat/completions:
     post:
       summary: Create a chat completion with Grok
+      description: |
+        Generates a chat completion using the specified model. 
+        For reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta), 
+        use the `reasoning_effort` parameter to control thinking effort and access 
+        the reasoning trace via `reasoning_content` and token details via `completion_tokens_details`.
       operationId: createChatCompletion
       requestBody:
         required: true
@@ -118,6 +123,14 @@ components:
             - "required": force tool call
             - "none": disable tool usage
             - object: specify a particular function
+        reasoning_effort:
+          type: string
+          enum:
+            - low
+            - high
+          nullable: true
+          default: null
+          description: Controls how much time the model spends thinking before responding. Only applicable for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta). 'low' for quick responses, 'high' for complex reasoning.
       required:
         - messages
         - model
@@ -175,6 +188,9 @@ components:
               items:
                 $ref: '#/components/schemas/GrokToolCall'
               description: List of tool calls requested by the assistant
+            reasoning_content:
+              type: string
+              description: The model's thought process before generating the response. Only present for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta).
           required:
             - content
 
@@ -372,6 +388,9 @@ components:
           example: 33
         prompt_tokens_details:
           $ref: '#/components/schemas/GrokPromptTokensDetails'
+        completion_tokens_details:
+          $ref: '#/components/schemas/GrokCompletionTokensDetails'
+          description: Details about completion tokens, including reasoning tokens for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta).
       required:
         - prompt_tokens
         - completion_tokens
@@ -401,6 +420,16 @@ components:
         - audio_tokens
         - image_tokens
         - cached_tokens
+
+    GrokCompletionTokensDetails:
+      type: object
+      properties:
+        reasoning_tokens:
+          type: integer
+          description: Number of tokens used for reasoning in the response.
+      required:
+        - reasoning_tokens
+      description: Breakdown of completion tokens, detailing tokens used for reasoning. Only present for reasoning-capable models.
 
     GrokErrorResponse:
       type: object
@@ -437,7 +466,7 @@ components:
           default: "grok-2-image-1212"
       required:
         - prompt
-    
+
     GrokImageGenerationResponse:
       type: object
       properties:
