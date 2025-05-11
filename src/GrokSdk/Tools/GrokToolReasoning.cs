@@ -54,7 +54,7 @@ public class GrokToolReasoning : IGrokTool
     /// <returns>A task resolving to a JSON-serialized string with the reasoning result or an error message.</returns>
     public async Task<string> ExecuteAsync(string arguments)
     {
-        ReasoningArgs args;
+        ReasoningArgs? args;
         try
         {
             args = JsonConvert.DeserializeObject<ReasoningArgs>(arguments);
@@ -64,6 +64,9 @@ public class GrokToolReasoning : IGrokTool
             return JsonConvert.SerializeObject(new { error = $"Invalid arguments: {ex.Message}" });
         }
 
+        if (args == null)
+            return JsonConvert.SerializeObject(new { error = "Args are null" });
+        
         if (string.IsNullOrEmpty(args.Problem))
             return JsonConvert.SerializeObject(new { error = "Problem cannot be empty." });
 

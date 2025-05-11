@@ -67,9 +67,11 @@ public class GrokToolImageGeneration : IGrokTool
         try
         {
             var args = JsonConvert.DeserializeObject<GrokToolImageGenerationArgs>(arguments);
-            if (string.IsNullOrEmpty(args?.Prompt))
+            if (args == null)
+                return JsonConvert.SerializeObject(new { error = "Arguments are null." });
+            if (string.IsNullOrEmpty(args.Prompt))
                 return JsonConvert.SerializeObject(new { error = "Prompt cannot be empty." });
-            if (args.N < 1 || args.N > 10)
+            if (args.N is < 1 or > 10)
                 return JsonConvert.SerializeObject(new { error = "n must be between 1 and 10." });
             if (args.ResponseFormat != "url" && args.ResponseFormat != "base64")
                 return JsonConvert.SerializeObject(
