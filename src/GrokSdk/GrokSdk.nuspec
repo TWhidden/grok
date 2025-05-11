@@ -2,12 +2,13 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata>
 		<id>GrokSdk</id>
-		<version>0.5.0</version>
+		<version>1.0.0</version>
 		<authors>Travis Whidden</authors>
 		<description>xAI Grok dotnet integration</description>
 		<tags>xAI Grok dotnet</tags>
 		<license type="expression">MIT</license>
 		<repository type="git" url="https://github.com/TWhidden/grok.git" />
+		<readme>README.md</readme>
 		<dependencies>
 			<group targetFramework="net8.0">
 				<dependency id="Newtonsoft.Json" version="13.0.3" />

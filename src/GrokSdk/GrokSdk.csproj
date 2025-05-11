@@ -9,7 +9,7 @@
 		<!-- NuGet Metadata -->
 		<NuspecFile>GrokSdk.nuspec</NuspecFile>
 		<PackageId>Grok</PackageId>
-		<Version>0.5.0</Version>
+		<Version>1.0.0</Version>
 		<Authors>TWhidden</Authors>
 		<Description>xAI Grok dotnet integration</Description>
 		<PackageTags>xAI;Grok;dotnet</PackageTags>

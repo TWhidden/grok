@@ -160,6 +160,7 @@ public enum StreamState
 {
     None, // Initial State
     Thinking, // Before streaming starts (e.g., API is processing)
+    CallingTool, // When a tool is being called
     Streaming, // Actively receiving chunks
     Done, // Stream has completed successfully
     Error // An error occurred

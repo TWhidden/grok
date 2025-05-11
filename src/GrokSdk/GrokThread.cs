@@ -1,4 +1,5 @@
-﻿using System.Threading.Channels;
+﻿using GrokSdk.Tools;
+using System.Threading.Channels;
 
 namespace GrokSdk;
 
@@ -57,7 +58,7 @@ public class GrokThread(GrokClient client)
 {
     private readonly GrokClient _client = client ?? throw new ArgumentNullException(nameof(client));
     private readonly List<GrokMessage> _history = new();
-    private readonly Dictionary<string, GrokToolDefinition> _tools = new();
+    private readonly Dictionary<string, IGrokTool> _tools = new();
     private string? _lastSystemInstruction;
 
     /// <summary>
@@ -115,10 +116,12 @@ public class GrokThread(GrokClient client)
     }
 
     /// <summary>
-    ///     Registers a tool with the thread, making it available for Grok to use.
+    /// Registers a tool with the thread, making it available for Grok to call during conversations.
     /// </summary>
-    /// <param name="tool">The tool definition to register.</param>
-    public void RegisterTool(GrokToolDefinition tool)
+    /// <param name="tool">The tool to register.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="tool"/> is null.</exception>
+    /// <exception cref="ArgumentException">Thrown if a tool with the same name is already registered.</exception>
+    public void RegisterTool(IGrokTool tool)
     {
         if (tool == null)
             throw new ArgumentNullException(nameof(tool));
@@ -225,14 +228,17 @@ public class GrokThread(GrokClient client)
             if (choice.Message.Tool_calls?.Count > 0)
             {
                 foreach (var toolCall in choice.Message.Tool_calls)
+                {
                     if (_tools.TryGetValue(toolCall.Function.Name, out var tool))
                     {
                         channel.Writer.TryWrite(new GrokStreamState(StreamState.Streaming));
 
+                        channel.Writer.TryWrite(new GrokStreamState(StreamState.CallingTool));
                         // Execute the tool
-                        var result = await tool.Execute(toolCall.Function.Arguments);
+                        var result = await tool.ExecuteAsync(toolCall.Function.Arguments);
 
-                        // the channel reader may care about this raw data - it could be used in an outside resource like an image URL
+                        // the channel reader may care about this raw data -
+                        // it could be used in an outside resource like an image URL
                         channel.Writer.TryWrite(new GrokToolResponse(toolCall.Function.Name, result));
 
                         // Respond to Grok accordingly
@@ -242,6 +248,7 @@ public class GrokThread(GrokClient client)
                     {
                         throw new InvalidOperationException($"Tool '{toolCall.Function.Name}' not found.");
                     }
+                }
             }
             else
             {

@@ -1,16 +1,21 @@
 ﻿using GrokSdk;
+using GrokSdk.Tools;
 
 internal class Program
 {
     private static async Task Main(string[] args)
     {
         // Initialize the HTTP client and GrokClient
+        string apiKey = GetApiKey();
         var httpClient = new HttpClient();
-        var sdk = new GrokClient(httpClient,
-            "xai-Key-Here");
+        var sdk = new GrokClient(httpClient, apiKey);
 
         // Create a GrokThread instance to manage the conversation
         var thread = new GrokThread(sdk);
+
+        // Register some pre-made tools
+        thread.RegisterTool(new GrokToolImageGeneration(sdk));
+        thread.RegisterTool(new GrokToolReasoning(sdk));
 
         // Welcome message
         Console.WriteLine("Welcome to the Grok Chat Console. Type your questions below. Type 'quit' to exit.");
@@ -54,6 +59,10 @@ internal class Program
                                 Console.ForegroundColor = ConsoleColor.Red;
                                 Console.WriteLine("Error Processing...");
                                 break;
+                            case StreamState.CallingTool:
+                                Console.ForegroundColor = ConsoleColor.Magenta;
+                                Console.WriteLine("Calling Tool...");
+                                break;
                         }
 
                         Console.ResetColor();
@@ -77,5 +86,33 @@ internal class Program
 
         // Farewell message
         Console.WriteLine("Goodbye!");
+    }
+
+    /// <summary>
+    /// Retrieves the xAI API key, either from a stored file in the current directory or by prompting the user.
+    /// </summary>
+    /// <returns>The xAI API key.</returns>
+    private static string GetApiKey()
+    {
+        string filePath = Path.Combine(Directory.GetCurrentDirectory(), ".xai_key");
+        if (File.Exists(filePath))
+        {
+            string key = File.ReadAllText(filePath).Trim();
+            if (!string.IsNullOrEmpty(key))
+            {
+                return key;
+            }
+        }
+
+        Console.WriteLine("Please enter your xAI API key:");
+        string enteredKey = Console.ReadLine().Trim();
+        while (string.IsNullOrEmpty(enteredKey))
+        {
+            Console.WriteLine("API key cannot be empty. Please enter a valid key:");
+            enteredKey = Console.ReadLine().Trim();
+        }
+
+        File.WriteAllText(filePath, enteredKey);
+        return enteredKey;
     }
 }
