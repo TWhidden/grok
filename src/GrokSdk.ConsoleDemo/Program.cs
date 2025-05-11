@@ -105,11 +105,11 @@ internal class Program
         }
 
         Console.WriteLine("Please enter your xAI API key:");
-        string enteredKey = Console.ReadLine().Trim();
+        string enteredKey = Console.ReadLine()?.Trim() ?? throw new Exception("Failed to get Console ReadLine");
         while (string.IsNullOrEmpty(enteredKey))
         {
             Console.WriteLine("API key cannot be empty. Please enter a valid key:");
-            enteredKey = Console.ReadLine().Trim();
+            enteredKey = Console.ReadLine()?.Trim() ?? throw new Exception("Failed to get Console ReadLine");
         }
 
         File.WriteAllText(filePath, enteredKey);

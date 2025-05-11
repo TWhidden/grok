@@ -144,7 +144,7 @@ public class GrokThread(GrokClient client)
     /// </summary>
     /// <param name="question">The question to ask.</param>
     /// <param name="files">Files to do an analysis on (optional).</param>
-    /// <param name="model">The model to use (default: "grok-2-latest").</param>
+    /// <param name="model">The model to use (default: "grok-3-latest").</param>
     /// <param name="temperature">The temperature for response generation (default: 0).</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>An IAsyncEnumerable of GrokMessageBase containing status updates and responses.</returns>
@@ -152,7 +152,7 @@ public class GrokThread(GrokClient client)
     public IAsyncEnumerable<GrokMessageBase> AskQuestion(
         string? question,
         List<byte[]>? files = null,
-        string model = "grok-2-latest",
+        string model = "grok-3-latest",
         float temperature = 0,
         CancellationToken cancellationToken = default)
     {
@@ -234,6 +234,7 @@ public class GrokThread(GrokClient client)
                         channel.Writer.TryWrite(new GrokStreamState(StreamState.Streaming));
 
                         channel.Writer.TryWrite(new GrokStreamState(StreamState.CallingTool));
+                        
                         // Execute the tool
                         var result = await tool.ExecuteAsync(toolCall.Function.Arguments);
 

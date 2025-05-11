@@ -3,11 +3,69 @@
 namespace GrokSdk.Tools;
 
 /// <summary>
+///     Represents the arguments for the reasoning tool.
+/// </summary>
+public class GrokToolReasoningArgs
+{
+    /// <summary>
+    ///     The problem to reason about.
+    /// </summary>
+    [JsonProperty("problem")]
+    public string Problem { get; set; } = string.Empty;
+
+    /// <summary>
+    ///     The effort level for reasoning, either "low" or "high". Defaults to "low".
+    /// </summary>
+    [JsonProperty("effort")]
+    public string Effort { get; set; } = "low";
+}
+
+/// <summary>
+///     Represents the response from the reasoning tool.
+/// </summary>
+public class GrokToolReasoningResponse
+{
+    /// <summary>
+    ///     The reasoning result.
+    /// </summary>
+    [JsonProperty("reasoning")]
+    public string? Reasoning { get; set; }
+
+    /// <summary>
+    ///     An error message if the operation failed.
+    /// </summary>
+    [JsonProperty("error")]
+    public string? Error { get; set; }
+
+    /// <summary>
+    ///     Deserializes a JSON string into a <see cref="GrokToolReasoningResponse" /> object.
+    /// </summary>
+    /// <param name="json">The JSON string to deserialize.</param>
+    /// <returns>A <see cref="GrokToolReasoningResponse" /> object, or null if deserialization fails.</returns>
+    public static GrokToolReasoningResponse? DeserializeResponse(string json)
+    {
+        try
+        {
+            return JsonConvert.DeserializeObject<GrokToolReasoningResponse>(json);
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
+}
+
+/// <summary>
 ///     A pre-built tool that performs complex reasoning on a problem using the Grok API.
 ///     Users can specify the problem and the level of reasoning effort ("low" or "high").
 /// </summary>
 public class GrokToolReasoning : IGrokTool
 {
+    /// <summary>
+    ///     Tool Name
+    /// </summary>
+    public const string ToolName = "grok_tool_reasoning";
+
     private readonly GrokClient _client;
     private readonly string _grokModel;
 
@@ -26,7 +84,7 @@ public class GrokToolReasoning : IGrokTool
     /// <summary>
     ///     Gets the name of the tool, used by Grok to identify it.
     /// </summary>
-    public string Name => "reason";
+    public string Name => ToolName;
 
     /// <summary>
     ///     Gets a description of the tool's functionality.
@@ -48,27 +106,41 @@ public class GrokToolReasoning : IGrokTool
     };
 
     /// <summary>
-    ///     Performs reasoning on the provided problem with the specified effort level and returns the result.
+    ///     Executes the tool with JSON-serialized arguments, as required by IGrokTool.
     /// </summary>
     /// <param name="arguments">A JSON-serialized string containing the 'problem' and optional 'effort' fields.</param>
     /// <returns>A task resolving to a JSON-serialized string with the reasoning result or an error message.</returns>
     public async Task<string> ExecuteAsync(string arguments)
     {
-        ReasoningArgs? args;
+        if (string.IsNullOrEmpty(arguments))
+            return JsonConvert.SerializeObject(new GrokToolReasoningResponse
+                { Error = "Arguments are null or empty." });
+
         try
         {
-            args = JsonConvert.DeserializeObject<ReasoningArgs>(arguments);
+            var args = JsonConvert.DeserializeObject<GrokToolReasoningArgs>(arguments);
+            if (args == null)
+                return JsonConvert.SerializeObject(new GrokToolReasoningResponse
+                    { Error = "Failed to deserialize arguments." });
+            var response = await ExecuteTypedAsync(args);
+            return JsonConvert.SerializeObject(response);
         }
         catch (JsonException ex)
         {
-            return JsonConvert.SerializeObject(new { error = $"Invalid arguments: {ex.Message}" });
+            return JsonConvert.SerializeObject(new GrokToolReasoningResponse
+                { Error = $"Invalid arguments: {ex.Message}" });
         }
+    }
 
-        if (args == null)
-            return JsonConvert.SerializeObject(new { error = "Args are null" });
-        
+    /// <summary>
+    ///     Performs reasoning on the provided problem with the specified effort level and returns the result.
+    /// </summary>
+    /// <param name="args">The arguments for the reasoning operation.</param>
+    /// <returns>A task resolving to the reasoning response.</returns>
+    public async Task<GrokToolReasoningResponse> ExecuteTypedAsync(GrokToolReasoningArgs args)
+    {
         if (string.IsNullOrEmpty(args.Problem))
-            return JsonConvert.SerializeObject(new { error = "Problem cannot be empty." });
+            return new GrokToolReasoningResponse { Error = "Problem cannot be empty." };
 
         GrokChatCompletionRequestReasoning_effort effort;
         switch (args.Effort.ToLower())
@@ -80,7 +152,7 @@ public class GrokToolReasoning : IGrokTool
                 effort = GrokChatCompletionRequestReasoning_effort.High;
                 break;
             default:
-                return JsonConvert.SerializeObject(new { error = "Invalid effort level. Must be 'low' or 'high'." });
+                return new GrokToolReasoningResponse { Error = "Invalid effort level. Must be 'low' or 'high'." };
         }
 
         var request = new GrokChatCompletionRequest
@@ -100,23 +172,11 @@ public class GrokToolReasoning : IGrokTool
         {
             var response = await _client.CreateChatCompletionAsync(request);
             var reasoning = response.Choices.First().Message.Content;
-            return JsonConvert.SerializeObject(new { reasoning });
+            return new GrokToolReasoningResponse { Reasoning = reasoning };
         }
         catch (Exception ex)
         {
-            return JsonConvert.SerializeObject(new { error = $"Reasoning failed: {ex.Message}" });
+            return new GrokToolReasoningResponse { Error = $"Reasoning failed: {ex.Message}" };
         }
-    }
-
-    /// <summary>
-    ///     Private class to deserialize the tool's arguments.
-    /// </summary>
-    private class ReasoningArgs
-    {
-        [JsonProperty("problem")]
-        public string Problem { get; set; } = string.Empty;
-
-        [JsonProperty("effort")]
-        public string Effort { get; set; } = "low"; // Default to "low"
     }
 }

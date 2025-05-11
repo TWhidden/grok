@@ -73,7 +73,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                 new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
                 new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
             },
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -119,7 +119,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                 new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
                 new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
             },
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -154,7 +154,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                 new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
                 new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
             },
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -230,7 +230,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         var request = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -281,7 +281,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             var followUpRequest = new GrokChatCompletionRequest
             {
                 Messages = messages,
-                Model = "grok-2-latest",
+                Model = "grok-3-latest",
                 Stream = false,
                 Temperature = 0f,
                 Tools = grokTools,
@@ -359,7 +359,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         var request = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -454,7 +454,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             var followUpRequest = new GrokChatCompletionRequest
             {
                 Messages = messages,
-                Model = "grok-2-latest",
+                Model = "grok-3-latest",
                 Stream = false,
                 Temperature = 0f,
                 Tools = grokTools,
@@ -549,7 +549,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         var request = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -590,7 +590,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                 var followUpRequest = new GrokChatCompletionRequest
                 {
                     Messages = messages,
-                    Model = "grok-2-latest",
+                    Model = "grok-3-latest",
                     Stream = false,
                     Temperature = 0f,
                     Tools = grokTools,

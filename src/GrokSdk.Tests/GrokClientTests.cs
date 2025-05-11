@@ -25,9 +25,9 @@ public class GrokClientTests : GrokClientTestBaseClass
             Messages = new Collection<GrokMessage>
             {
                 new GrokSystemMessage { Content = "You are a test assistant." },
-                new GrokUserMessage { Content = [new GrokTextPart { Text = "Say hello world." }] }
+                new GrokUserMessage { Content = [new GrokTextPart { Text = "Say exactly \"hello world\"" }] }
             },
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f
         };
@@ -47,7 +47,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         Assert.IsNotNull(response.Id, "Response ID should not be null.");
         Assert.AreEqual("chat.completion", response.Object, "Response object type should be 'chat.completion'.");
         Assert.IsTrue(response.Choices.Count > 0, "Response should have at least one choice.");
-        Assert.AreEqual("hello world!", response.Choices.First().Message.Content.ToLower(),
+        Assert.AreEqual("hello world", response.Choices.First().Message.Content.ToLower(),
             "Response content should contain 'hello world' (case-insensitive).");
         Assert.AreEqual(GrokChoiceFinish_reason.Stop, response.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
@@ -72,11 +72,11 @@ public class GrokClientTests : GrokClientTestBaseClass
                 {
                     Content = new List<GrokContent>
                     {
-                        new GrokTextPart { Text = "Say hello world." }
+                        new GrokTextPart { Text = "Say exactly \"hello world\"" }
                     }
                 }
             },
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f
         };
@@ -96,7 +96,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         Assert.IsNotNull(response.Id, "Response ID should not be null.");
         Assert.AreEqual("chat.completion", response.Object, "Response object type should be 'chat.completion'.");
         Assert.IsTrue(response.Choices.Count > 0, "Response should have at least one choice.");
-        Assert.AreEqual("hello world!", response.Choices.First().Message.Content.ToLower(),
+        Assert.AreEqual("hello world", response.Choices.First().Message.Content.ToLower(),
             "Response content should contain 'hello world' (case-insensitive).");
         Assert.AreEqual(GrokChoiceFinish_reason.Stop, response.Choices.First().Finish_reason,
             "Finish reason should be 'stop'.");
@@ -135,7 +135,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         var request1 = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f
         };
@@ -171,7 +171,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         var request2 = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f
         };
@@ -207,7 +207,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         var request3 = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f
         };
@@ -258,7 +258,7 @@ public class GrokClientTests : GrokClientTestBaseClass
                     Content = [new GrokTextPart { Text = $"/roast \"{targetName}\"" }]
                 }
             },
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = false,
             Temperature = 0f
         };
@@ -382,7 +382,7 @@ public class GrokClientTests : GrokClientTestBaseClass
                     ]
                 }
             },
-            Model = "grok-2-latest",
+            Model = "grok-3-latest",
             Stream = true, // Explicitly set for clarity, though StartStreamAsync will enforce this
             Temperature = 0f
         };
@@ -640,7 +640,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         Assert.IsTrue(jsonResponse.population != null, "JSON should contain a 'population' field.");
 
         // **Step 3: Spanish translation**
-        thread.AddSystemInstruction("Translate all responses to Spanish.");
+        thread.AddSystemInstruction("Translate all responses to Spanish. Do not respond in JSON anymore");
         var question3 = "What is the weather like today?";
         await WaitForRateLimitAsync();
         var messages3 = await CollectMessagesAsync(question3);

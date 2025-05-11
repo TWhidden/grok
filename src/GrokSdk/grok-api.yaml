@@ -80,8 +80,8 @@ components:
           description: List of messages in the conversation
         model:
           type: string
-          description: The Grok model to use (e.g., grok-2-latest)
-          example: "grok-2-latest"
+          description: The Grok model to use (e.g., grok-3-latest)
+          example: "grok-3-latest"
         stream:
           type: boolean
           description: Whether to stream the response as Server-Sent Events

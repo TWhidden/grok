@@ -17,10 +17,10 @@ public static class SatelliteHelper
         // Step 1: Extract the table content
         string tableStart = "<table class=\"footable table\" id=\"categoriestab\">";
         string tableEnd = "</table>";
-        int startIndex = htmlString.IndexOf(tableStart);
+        int startIndex = htmlString.IndexOf(tableStart, StringComparison.Ordinal);
         if (startIndex == -1) return satellites; // Table not found
         startIndex += tableStart.Length;
-        int endIndex = htmlString.IndexOf(tableEnd, startIndex);
+        int endIndex = htmlString.IndexOf(tableEnd, startIndex, StringComparison.Ordinal);
         if (endIndex == -1) return satellites; // Closing tag not found
 
         string tableHtml = htmlString.Substring(startIndex, endIndex - startIndex);
@@ -46,31 +46,19 @@ public static class SatelliteHelper
                     cells[i] = tdMatches[i].Groups[1].Value.Trim();
 
                 // Parse Name (may contain <a> tag)
-                string nameMatch = Regex.Match(cells[0], @"<a[^>]*>(.*?)</a>", RegexOptions.IgnoreCase).Groups[1].Value;
+                string nameMatch = Regex.Match(cells[0], "<a[^>]*>(.*?)</a>", RegexOptions.IgnoreCase).Groups[1].Value;
                 string name = string.IsNullOrEmpty(nameMatch) ? cells[0] : nameMatch;
 
                 // Parse NORAD ID
                 int noradId = int.Parse(cells[1]);
-
-                // Parse International Code
-                string intlCode = cells[2];
-
-                // Parse Launch Date (may contain <a> tag)
-                string dateMatch = Regex.Match(cells[3], @"<a[^>]*>(.*?)</a>", RegexOptions.IgnoreCase).Groups[1].Value;
-                string dateText = string.IsNullOrEmpty(dateMatch) ? cells[3] : dateMatch;
-                DateTime launchDate = DateTime.Parse(dateText);
-
-                // Parse Period
-                double period = double.Parse(cells[4]);
-
+               
                 // Create satellite object
-                var satellite = new SatelliteData(name, noradId); //, intlCode launchDate,period);
+                var satellite = new SatelliteData(name, noradId); 
                 satellites.Add(satellite);
             }
-            catch (Exception ex)
+            catch
             {
-                // Log parsing error if needed, e.g., Console.WriteLine($"Error parsing row: {ex.Message}");
-                continue; // Skip rows with parsing errors
+                // Ignore
             }
         }
 

@@ -407,7 +407,7 @@ namespace GrokSdk
         public System.Collections.Generic.ICollection<GrokMessage> Messages { get; set; } = new System.Collections.ObjectModel.Collection<GrokMessage>();
 
         /// <summary>
-        /// The Grok model to use (e.g., grok-2-latest)
+        /// The Grok model to use (e.g., grok-3-latest)
         /// </summary>
         [Newtonsoft.Json.JsonProperty("model", Required = Newtonsoft.Json.Required.Always)]
         [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]

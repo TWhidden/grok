@@ -35,11 +35,13 @@ public class GrokToolTests : GrokClientTestBaseClass
         }
 
         Assert.IsNotNull(resultUrl, "Response should not be null.");
-        var responseUrl = JsonConvert.DeserializeObject<dynamic>(resultUrl);
-        Assert.IsNull(responseUrl.error, "Error should be null.");
-        Assert.IsNotNull(responseUrl.images, "Images should not be null.");
-        Assert.AreEqual(1, responseUrl.images.Count, "Expected 1 image.");
-        Assert.IsTrue(Uri.IsWellFormedUriString(responseUrl.images[0].url.ToString(), UriKind.Absolute),
+        var responseUrl = JsonConvert.DeserializeObject<GrokToolImageGenerationResponse>(resultUrl);
+        Assert.IsNotNull(responseUrl, "responseUrl is null");
+        Assert.IsNull(responseUrl.Error, "Error should be null.");
+        Assert.IsNotNull(responseUrl.Images, "Images should not be null.");
+        Assert.AreEqual(1, responseUrl.Images.Count, "Expected 1 image.");
+        Assert.IsNotNull(responseUrl.Images[0].Url, "Url returned was null!");
+        Assert.IsTrue(Uri.IsWellFormedUriString(responseUrl.Images[0].Url, UriKind.Absolute),
             "Image URL should be valid.");
 
         // Test with 'base64' response format
@@ -47,7 +49,7 @@ public class GrokToolTests : GrokClientTestBaseClass
         var argsBase64 =
             JsonConvert.SerializeObject(new { prompt = "A futuristic robot", n = 1, response_format = "base64" });
         await WaitForRateLimitAsync();
-        string resultBase64 = null;
+        string? resultBase64 = null;
         try
         {
             resultBase64 = await toolBase64.ExecuteAsync(argsBase64);
@@ -58,11 +60,12 @@ public class GrokToolTests : GrokClientTestBaseClass
         }
 
         Assert.IsNotNull(resultBase64, "Response should not be null.");
-        var responseBase64 = JsonConvert.DeserializeObject<dynamic>(resultBase64);
-        Assert.IsNull(responseBase64.error, "Error should be null.");
-        Assert.IsNotNull(responseBase64.images, "Images should not be null.");
-        Assert.AreEqual(1, responseBase64.images.Count, "Expected 1 image.");
-        Assert.IsNotNull(responseBase64.images[0].b64_json, "Base64 image data should not be null.");
+        var responseBase64 = JsonConvert.DeserializeObject<GrokToolImageGenerationResponse>(resultBase64);
+        Assert.IsNotNull(responseBase64, "responseBase64 is null");
+        Assert.IsNull(responseBase64.Error, "Error should be null.");
+        Assert.IsNotNull(responseBase64.Images, "Images should not be null.");
+        Assert.AreEqual(1, responseBase64.Images.Count, "Expected 1 image.");
+        Assert.IsNotNull(responseBase64.Images[0].B64Json, "Base64 image data should not be null.");
 
         // Safety Check for Live Unit Tests to prevent API exhaustion
         await WaitForRateLimitAsync();
@@ -92,30 +95,33 @@ public class GrokToolTests : GrokClientTestBaseClass
         await WaitForRateLimitAsync();
 
         var toolCalled = false;
-        string toolResponseJson = null;
+        string? toolResponseJson = null;
 
         await foreach (var message in thread.AskQuestion(userMessage))
-            if (message is GrokToolResponse { ToolName: "generate_image" } toolResponse1)
+            if (message is GrokToolResponse { ToolName: GrokToolImageGeneration.ToolName } toolResponse1)
             {
                 toolCalled = true;
                 toolResponseJson = toolResponse1.ToolResponse;
                 break; // Assuming only one tool call for simplicity
             }
 
-        // Assert
-        Assert.IsTrue(toolCalled, "The 'generate_image' tool was not called.");
+        Assert.IsNotNull(toolResponseJson, "toolResponseJson was null");
+        Assert.IsTrue(toolCalled, $"The '{GrokToolImageGeneration.ToolName}' tool was not called.");
 
-        var toolResponse = JsonConvert.DeserializeObject<dynamic>(toolResponseJson);
-        if (toolResponse.error != null) Assert.Fail($"Tool returned an error: {toolResponse.error}");
+        var toolResponse = GrokToolImageGenerationResponse.DeserializeResponse(toolResponseJson);
 
-        var images = toolResponse.images;
+        Assert.IsNotNull(toolResponse, "toolResponse was null");
+        
+        if (toolResponse.Error != null) Assert.Fail($"Tool returned an error: {toolResponse.Error}");
+
+        var images = toolResponse.Images;
         Assert.IsNotNull(images, "Images array is missing.");
         Assert.AreEqual(2, images.Count, "Expected two images.");
 
         foreach (var image in images)
         {
-            Assert.IsNotNull(image.url, "Image URL is missing.");
-            Assert.IsTrue(Uri.IsWellFormedUriString(image.url.ToString(), UriKind.Absolute), "Image URL is invalid.");
+            Assert.IsNotNull(image.Url, "Image URL is missing.");
+            Assert.IsTrue(Uri.IsWellFormedUriString(image.Url, UriKind.Absolute), "Image URL is invalid.");
         }
 
         await WaitForRateLimitAsync();
@@ -143,16 +149,17 @@ public class GrokToolTests : GrokClientTestBaseClass
         }
 
         Assert.IsNotNull(resultLow, "Response should not be null.");
-        var responseLow = JsonConvert.DeserializeObject<dynamic>(resultLow);
-        Assert.IsNull(responseLow.error, "Error should be null for valid request.");
-        Assert.IsNotNull(responseLow.reasoning, "Reasoning should not be null.");
-        Assert.IsTrue(responseLow.reasoning.ToString().Length > 0, "Reasoning should not be empty.");
+        var responseLow = JsonConvert.DeserializeObject<GrokToolReasoningResponse>(resultLow);
+        Assert.IsNotNull(responseLow, "responseLow was null");
+        Assert.IsNull(responseLow.Error, "Error should be null for valid request.");
+        Assert.IsNotNull(responseLow.Reasoning, "Reasoning should not be null.");
+        Assert.IsTrue(responseLow.Reasoning.Length > 0, "Reasoning should not be empty.");
 
         // Test with effort "high"
         var argsHigh =
             JsonConvert.SerializeObject(new { problem = "Explain quantum mechanics briefly.", effort = "high" });
         await WaitForRateLimitAsync();
-        string resultHigh = null;
+        string? resultHigh = null;
         try
         {
             resultHigh = await tool.ExecuteAsync(argsHigh);
@@ -163,15 +170,16 @@ public class GrokToolTests : GrokClientTestBaseClass
         }
 
         Assert.IsNotNull(resultHigh, "Response should not be null.");
-        var responseHigh = JsonConvert.DeserializeObject<dynamic>(resultHigh);
-        Assert.IsNull(responseHigh.error, "Error should be null for valid request.");
-        Assert.IsNotNull(responseHigh.reasoning, "Reasoning should not be null.");
-        Assert.IsTrue(responseHigh.reasoning.ToString().Length > 0, "Reasoning should not be empty.");
+        var responseHigh = JsonConvert.DeserializeObject<GrokToolReasoningResponse>(resultHigh);
+        Assert.IsNotNull(responseHigh, "responseHigh was null");
+        Assert.IsNull(responseHigh.Error, "Error should be null for valid request.");
+        Assert.IsNotNull(responseHigh.Reasoning, "Reasoning should not be null.");
+        Assert.IsTrue(responseHigh.Reasoning.Length > 0, "Reasoning should not be empty.");
 
         // Test with invalid effort
         var argsInvalidEffort = JsonConvert.SerializeObject(new { problem = "Some problem", effort = "medium" });
         await WaitForRateLimitAsync();
-        string resultInvalidEffort = null;
+        string? resultInvalidEffort = null;
         try
         {
             resultInvalidEffort = await tool.ExecuteAsync(argsInvalidEffort);
@@ -182,14 +190,15 @@ public class GrokToolTests : GrokClientTestBaseClass
         }
 
         Assert.IsNotNull(resultInvalidEffort, "Response should not be null.");
-        var responseInvalidEffort = JsonConvert.DeserializeObject<dynamic>(resultInvalidEffort);
-        Assert.IsNotNull(responseInvalidEffort.error, "Error should not be null for invalid effort.");
-        Assert.AreEqual("Invalid effort level. Must be 'low' or 'high'.", responseInvalidEffort.error.ToString());
+        var responseInvalidEffort = JsonConvert.DeserializeObject<GrokToolReasoningResponse>(resultInvalidEffort);
+        Assert.IsNotNull(responseInvalidEffort, "responseInvalidEffort was null");
+        Assert.IsNotNull(responseInvalidEffort.Error, "Error should not be null for invalid effort.");
+        Assert.AreEqual("Invalid effort level. Must be 'low' or 'high'.", responseInvalidEffort.Error);
 
         // Test with missing problem
         var argsMissingProblem = JsonConvert.SerializeObject(new { effort = "low" });
         await WaitForRateLimitAsync();
-        string resultMissingProblem = null;
+        string? resultMissingProblem = null;
         try
         {
             resultMissingProblem = await tool.ExecuteAsync(argsMissingProblem);
@@ -200,9 +209,10 @@ public class GrokToolTests : GrokClientTestBaseClass
         }
 
         Assert.IsNotNull(resultMissingProblem, "Response should not be null.");
-        var responseMissingProblem = JsonConvert.DeserializeObject<dynamic>(resultMissingProblem);
-        Assert.IsNotNull(responseMissingProblem.error, "Error should not be null for missing problem.");
-        Assert.AreEqual("Problem cannot be empty.", responseMissingProblem.error.ToString());
+        var responseMissingProblem = JsonConvert.DeserializeObject<GrokToolReasoningResponse>(resultMissingProblem);
+        Assert.IsNotNull(responseMissingProblem, "responseMissingProblem was null");
+        Assert.IsNotNull(responseMissingProblem.Error, "Error should not be null for missing problem.");
+        Assert.AreEqual("Problem cannot be empty.", responseMissingProblem.Error);
 
         // Safety Check for Live Unit Tests to prevent API exhaustion
         await WaitForRateLimitAsync();
