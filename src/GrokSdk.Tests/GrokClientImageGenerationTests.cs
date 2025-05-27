@@ -10,8 +10,9 @@ public class GrokClientImageGenerationTests : GrokClientTestBaseClass
     }
 
     [TestMethod]
+    [DataRow("grok-2-image-1212")]
     [TestCategory("Live")]
-    public async Task GenerateImagesAsync_LiveSimplePrompt_ReturnsValidImageUrl()
+    public async Task GenerateImagesAsync_LiveSimplePrompt_ReturnsValidImageUrl(string model)
     {
         // Arrange
         using var httpClient = new HttpClient();
@@ -21,7 +22,7 @@ public class GrokClientImageGenerationTests : GrokClientTestBaseClass
         {
             Prompt = "A futuristic cityscape at sunset.",
             N = 1,
-            Model = "grok-2-image-1212"
+            Model = model
         };
 
         // Act
@@ -50,8 +51,9 @@ public class GrokClientImageGenerationTests : GrokClientTestBaseClass
     }
 
     [TestMethod]
+    [DataRow("grok-2-image-1212")]
     [TestCategory("Live")]
-    public async Task GenerateImagesAsync_LiveSimplePrompt_ReturnsValidBase64NoUrl()
+    public async Task GenerateImagesAsync_LiveSimplePrompt_ReturnsValidBase64NoUrl(string model)
     {
         // Arrange
         using var httpClient = new HttpClient();
@@ -61,7 +63,7 @@ public class GrokClientImageGenerationTests : GrokClientTestBaseClass
         {
             Prompt = "A futuristic cityscape at sunset.",
             N = 1,
-            Model = "grok-2-image-1212",
+            Model = model,
             Response_format = GrokImageGenerationRequestResponse_format.B64_json // Request base64 format
         };
 

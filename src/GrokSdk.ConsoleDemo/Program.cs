@@ -13,12 +13,17 @@ internal class Program
         // Create a GrokThread instance to manage the conversation
         var thread = new GrokThread(sdk);
 
+        // Set initial model
+        string currentModel = "grok-2-latest";
+
         // Register some pre-made tools
         thread.RegisterTool(new GrokToolImageGeneration(sdk));
         thread.RegisterTool(new GrokToolReasoning(sdk));
+        thread.RegisterTool(new GrokToolLiveSearch(sdk, currentModel));
+        thread.RegisterTool(new GrokToolImageUnderstanding(sdk));
 
-        // Welcome message
-        Console.WriteLine("Welcome to the Grok Chat Console. Type your questions below. Type 'quit' to exit.");
+        // Welcome message with instructions
+        Console.WriteLine("Welcome to the Grok Chat Console. Type your questions below. Type 'quit' to exit. Press 'm' to switch between models (grok-2-latest and grok-3-latest).");
 
         // Main interaction loop
         while (true)
@@ -32,10 +37,18 @@ internal class Program
             // Check for exit condition
             if (string.IsNullOrWhiteSpace(input) || input.ToLower() == "quit") break;
 
+            // Check for model switch hotkey
+            if (input.Trim().ToLower() == "m")
+            {
+                currentModel = currentModel == "grok-3-latest" ? "grok-2-latest" : "grok-3-latest";
+                Console.WriteLine($"Switched to model: {currentModel}");
+                continue; // Skip to next iteration
+            }
+
             try
             {
-                // Ask the question and get the streaming response
-                var messages = thread.AskQuestion(input);
+                // Ask the question using the current model and get the streaming response
+                var messages = thread.AskQuestion(input, model: currentModel);
 
                 // Stream the response parts with colors
                 await foreach (var message in messages)

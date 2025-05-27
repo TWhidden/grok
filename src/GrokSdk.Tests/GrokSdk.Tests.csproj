@@ -10,6 +10,15 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+	  <None Remove="Resources\Image1.jpg" />
+	  <None Remove="Resources\Image1.png" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="Resources\Image1.png" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<PackageReference Include="coverlet.collector" Version="6.0.0" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
 		<PackageReference Include="MSTest.TestAdapter" Version="3.1.1" />

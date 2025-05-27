@@ -1,6 +1,4 @@
 ﻿using System.Collections.ObjectModel;
-using System.Diagnostics;
-using System.Reflection;
 
 namespace GrokSdk.Tests;
 
@@ -14,15 +12,15 @@ public class GrokClientReasoningTests : GrokClientTestBaseClass
     }
 
     [TestMethod]
+    [DataRow("grok-3-mini-beta")] // Reasoning-capable model
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveReasoningEffort_ComparesLowAndHigh()
+    public async Task CreateChatCompletionAsync_LiveReasoningEffort_ComparesLowAndHigh(string model)
     {
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
 
         var prompt =
             "A car travels 60 miles per hour for 2 hours, then 30 miles per hour for 1 hour. What is the average speed for the entire trip?";
-        var model = "grok-3-mini-beta"; // Reasoning-capable model
 
         // Helper method to get response for a given reasoning effort
         async Task<(string content, string reasoningContent, int reasoningTokens)> GetResponseAsync(

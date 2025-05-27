@@ -13,9 +13,11 @@ public class GrokClientTests : GrokClientTestBaseClass
         ApiToken = GetApiKeyFromFileOrEnv();
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveHelloWorld_ReturnsValidResponse()
+    public async Task CreateChatCompletionAsync_LiveHelloWorld_ReturnsValidResponse(string model)
     {
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
@@ -27,7 +29,7 @@ public class GrokClientTests : GrokClientTestBaseClass
                 new GrokSystemMessage { Content = "You are a test assistant." },
                 new GrokUserMessage { Content = [new GrokTextPart { Text = "Say exactly \"hello world\"" }] }
             },
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f
         };
@@ -56,9 +58,11 @@ public class GrokClientTests : GrokClientTestBaseClass
         await WaitForRateLimitAsync();
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveHelloWorldArray_ReturnsValidResponse()
+    public async Task CreateChatCompletionAsync_LiveHelloWorldArray_ReturnsValidResponse(string model)
     {
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
@@ -76,7 +80,7 @@ public class GrokClientTests : GrokClientTestBaseClass
                     }
                 }
             },
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f
         };
@@ -112,9 +116,11 @@ public class GrokClientTests : GrokClientTestBaseClass
             "Constructor should throw when API token is null.");
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveConversation_MaintainsContext()
+    public async Task CreateChatCompletionAsync_LiveConversation_MaintainsContext(string model)
     {
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
@@ -135,7 +141,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         var request1 = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f
         };
@@ -171,7 +177,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         var request2 = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f
         };
@@ -207,7 +213,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         var request3 = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f
         };
@@ -235,9 +241,11 @@ public class GrokClientTests : GrokClientTestBaseClass
         await WaitForRateLimitAsync();
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveCommandRoast_ReturnsRoastMessage()
+    public async Task CreateChatCompletionAsync_LiveCommandRoast_ReturnsRoastMessage(string model)
     {
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
@@ -258,7 +266,7 @@ public class GrokClientTests : GrokClientTestBaseClass
                     Content = [new GrokTextPart { Text = $"/roast \"{targetName}\"" }]
                 }
             },
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f
         };
@@ -357,9 +365,11 @@ public class GrokClientTests : GrokClientTestBaseClass
         await WaitForRateLimitAsync();
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveStreaming_ReturnsStreamedResponse()
+    public async Task CreateChatCompletionAsync_LiveStreaming_ReturnsStreamedResponse(string model)
     {
         // Arrange
         using var httpClient = new HttpClient();
@@ -382,7 +392,7 @@ public class GrokClientTests : GrokClientTestBaseClass
                     ]
                 }
             },
-            Model = "grok-3-latest",
+            Model = model,
             Stream = true, // Explicitly set for clarity, though StartStreamAsync will enforce this
             Temperature = 0f
         };
@@ -432,10 +442,11 @@ public class GrokClientTests : GrokClientTestBaseClass
         await WaitForRateLimitAsync();
     }
 
-
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task GrokThread_AskMultipleQuestions_MaintainsContextAndStreamsResponses()
+    public async Task GrokThread_AskMultipleQuestions_MaintainsContextAndStreamsResponses(string model)
     {
         // Arrange
         using var httpClient = new HttpClient();
@@ -446,7 +457,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         async Task<List<GrokMessageBase>> CollectMessagesAsync(string question)
         {
             var messages = new List<GrokMessageBase>();
-            await foreach (var message in thread.AskQuestion(question, temperature: 0)) messages.Add(message);
+            await foreach (var message in thread.AskQuestion(question, model: model, temperature: 0)) messages.Add(message);
             return messages;
         }
 
@@ -543,9 +554,11 @@ public class GrokClientTests : GrokClientTestBaseClass
         await WaitForRateLimitAsync();
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task GrokThread_SystemMessages_InfluenceResponses()
+    public async Task GrokThread_SystemMessages_InfluenceResponses(string model)
     {
         // Arrange
         using var httpClient = new HttpClient();
@@ -556,7 +569,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         async Task<List<GrokMessageBase>> CollectMessagesAsync(string question)
         {
             var messages = new List<GrokMessageBase>();
-            await foreach (var message in thread.AskQuestion(question, temperature: 0)) messages.Add(message);
+            await foreach (var message in thread.AskQuestion(question, model: model, temperature: 0)) messages.Add(message);
             return messages;
         }
 

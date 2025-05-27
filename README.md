@@ -247,6 +247,62 @@ await foreach (var message in thread.AskQuestion("Explain why the sky is blue wi
 }
 ```
 
+### Live Search Tool
+The `GrokToolLiveSearch` tool enables Grok to perform real-time searches on various sources, including web, news, X, and RSS feeds. It returns a summary and citations based on the search query and parameters.
+
+To use this tool, register it with your `GrokThread` instance:
+
+```csharp  
+var thread = new GrokThread(client);  
+thread.RegisterTool(new GrokToolLiveSearch(client));  
+thread.AddSystemInstruction("You can perform live searches using the 'live_search' tool.");  
+```
+
+**Usage Example:**  
+```csharp  
+await foreach (var message in thread.AskQuestion("What's the latest news about AI?"))  
+{  
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == "live_search")  
+    {  
+        Console.WriteLine($"Search Summary: {toolResponse.ToolResponse}");  
+    }  
+}  
+```
+
+**Parameters:**  
+- `query`: The search query (required).  
+- `search_type`: The type of search ("web", "news", "x", "rss") (required).  
+- Optional parameters: `from_date`, `to_date`, `max_results`, `country`, etc. Refer to the tool's documentation for a full list.
+
+---
+
+### Image Understanding Tool
+The `GrokToolImageUnderstanding` tool allows Grok to analyze images and answer questions about them. It takes a prompt and an image (via URL or base64 data) and returns a description or answer based on the image content.
+
+To use this tool, register it with your `GrokThread` instance:
+
+```csharp  
+var thread = new GrokThread(client);  
+thread.RegisterTool(new GrokToolImageUnderstanding(client));  
+thread.AddSystemInstruction("You can analyze images using the 'image_understanding' tool.");  
+```
+
+**Usage Example:**  
+```csharp  
+await foreach (var message in thread.AskQuestion("What's in this image? https://example.com/image.jpg"))  
+{  
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == "image_understanding")  
+    {  
+        Console.WriteLine($"Image Description: {toolResponse.ToolResponse}");  
+    }  
+}  
+```
+
+**Parameters:**  
+- `prompt`: The question or task related to the image (required).  
+- `image_url`: The URL or base64-encoded image data (required).  
+- `image_detail`: Optional, specifies the level of detail ("low" or "high", defaults to "low").
+
 ## Additional Examples
 
 ### Simple Chat

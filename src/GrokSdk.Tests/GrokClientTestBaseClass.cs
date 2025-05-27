@@ -5,10 +5,10 @@ namespace GrokSdk.Tests;
 
 public abstract class GrokClientTestBaseClass
 {
-    protected static string? ApiToken { get; set; }
     private static readonly object Lock = new();
     private static readonly Stopwatch Stopwatch = Stopwatch.StartNew();
     private static double _lastCallElapsedSeconds;
+    protected static string? ApiToken { get; set; }
 
     protected static string GetApiKeyFromFileOrEnv()
     {
@@ -49,5 +49,16 @@ public abstract class GrokClientTestBaseClass
         {
             _lastCallElapsedSeconds = currentElapsed;
         }
+    }
+
+    protected byte[] GetResourceBytes(string resourceName)
+    {
+        var assembly = GetType().Assembly;
+        var fullResourceName = string.Concat(assembly.GetName().Name, ".", resourceName);
+        using var stream = assembly.GetManifestResourceStream(fullResourceName);
+        if (stream == null) throw new Exception("Resource not found");
+        var buffer = new byte[stream.Length];
+        stream.Read(buffer, 0, (int)stream.Length);
+        return buffer;
     }
 }

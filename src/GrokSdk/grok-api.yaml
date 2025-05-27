@@ -131,9 +131,57 @@ components:
           nullable: true
           default: null
           description: Controls how much time the model spends thinking before responding. Only applicable for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta). 'low' for quick responses, 'high' for complex reasoning.
+        search_parameters:
+          $ref: '#/components/schemas/GrokSearchParameters'
+          description: Parameters for live search functionality. Optional and defaults to null if not provided.
+          nullable: true
+          default: null
       required:
         - messages
         - model
+
+    GrokChatCompletionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the completion
+          example: "9116ebda-e5d9-4885-b374-ea891b6b693c"
+        object:
+          type: string
+          description: Type of object returned
+          example: "chat.completion"
+        created:
+          type: integer
+          description: Unix timestamp of when the completion was created
+          example: 1739936964
+        model:
+          type: string
+          description: The model used for the completion
+          example: "grok-2-1212"
+        choices:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrokChoice'
+          description: List of response choices
+        usage:
+          $ref: '#/components/schemas/GrokUsage'
+        system_fingerprint:
+          type: string
+          description: Unique identifier for the system configuration
+          example: "fp_c612364da3"
+        citations:
+          type: array
+          items:
+            type: string
+          description: List of citation URLs when return_citations is true. Optional and only included if LiveSearch is used.
+      required:
+        - id
+        - object
+        - created
+        - model
+        - choices
+        - usage
 
     GrokMessage:
       type: object
@@ -171,7 +219,7 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/GrokContent'
-              description: Array of content parts (e.g., text, images)
+              description: Array of content parts (e.g., text, images). Supports Image Understanding via image_url parts.
           required:
             - content
 
@@ -243,21 +291,23 @@ components:
         - type: object
           properties:
             image_url:
-              type: object
-              properties:
-                url:
-                  type: string
-                  description: URL or base64-encoded image (e.g., "data:image/jpeg;base64,<data>")
-                detail:
-                  type: string
-                  enum: ["low", "high"]
-                  description: Level of detail for the image
-              required:
-                - url
-              description: Details of the image URL
+              $ref: '#/components/schemas/GrokImageUrl'
           required:
             - image_url
-          description: A content part containing an image URL
+          description: A content part containing an image URL or base64-encoded image for Image Understanding
+
+    GrokImageUrl:
+      type: object
+      properties:
+        url:
+          type: string
+          description: URL or base64-encoded image (e.g., "data:image/jpeg;base64,<data>"). Supported formats jpg/jpeg, png. Maximum size 10MiB.
+        detail:
+          type: string
+          enum: ["low", "high"]
+          description: Level of detail for the image
+      required:
+        - url
 
     GrokTool:
       type: object
@@ -313,44 +363,6 @@ components:
         - id
         - type
         - function
-
-    GrokChatCompletionResponse:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique identifier for the completion
-          example: "9116ebda-e5d9-4885-b374-ea891b6b693c"
-        object:
-          type: string
-          description: Type of object returned
-          example: "chat.completion"
-        created:
-          type: integer
-          description: Unix timestamp of when the completion was created
-          example: 1739936964
-        model:
-          type: string
-          description: The model used for the completion
-          example: "grok-2-1212"
-        choices:
-          type: array
-          items:
-            $ref: '#/components/schemas/GrokChoice'
-          description: List of response choices
-        usage:
-          $ref: '#/components/schemas/GrokUsage'
-        system_fingerprint:
-          type: string
-          description: Unique identifier for the system configuration
-          example: "fp_c612364da3"
-      required:
-        - id
-        - object
-        - created
-        - model
-        - choices
-        - usage
 
     GrokChoice:
       type: object
@@ -476,11 +488,11 @@ components:
         data:
           type: array
           items:
-            $ref: '#/components/schemas/ImageData'
+            $ref: '#/components/schemas/GrokImageData'
       required:
         - data
 
-    ImageData:
+    GrokImageData:
       type: object
       properties:
         url:
@@ -494,6 +506,126 @@ components:
           description: The revised prompt used for image generation
       required:
         - revised_prompt
+
+    GrokSearchParameters:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum:
+            - auto
+            - on
+            - off
+          default: auto
+          description: Controls the search mode. 'auto' lets the model decide, 'on' forces search, 'off' disables search.
+        return_citations:
+          type: boolean
+          default: true
+          description: Whether to return citations in the response.
+        from_date:
+          type: string
+          format: date
+          nullable: true
+          default: null
+          description: Start date for search data in ISO8601 format (YYYY-MM-DD).
+        to_date:
+          type: string
+          format: date
+          nullable: true
+          default: null
+          description: End date for search data in ISO8601 format (YYYY-MM-DD).
+        max_search_results:
+          type: integer
+          minimum: 1
+          nullable: true
+          default: null
+          description: Maximum number of search results to consider.
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrokSource'
+          description: List of data sources to use for search.
+      description: Optional parameters for LiveSearch. All fields are optional and default to null or their default values.
+
+    GrokSource:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - web
+            - x
+            - news
+            - rss
+          description: The type of source, used to determine the specific source schema.
+      required:
+        - type
+      discriminator:
+        propertyName: type
+        mapping:
+          web: '#/components/schemas/GrokWebSource'
+          x: '#/components/schemas/GrokXSource'
+          news: '#/components/schemas/GrokNewsSource'
+          rss: '#/components/schemas/GrokRssSource'
+
+    GrokWebSource:
+      allOf:
+        - $ref: '#/components/schemas/GrokSource'
+        - type: object
+          properties:
+            country:
+              type: string
+              description: ISO alpha-2 country code.
+            excluded_websites:
+              type: array
+              items:
+                type: string
+              maxItems: 5
+              description: List of websites to exclude.
+            safe_search:
+              type: boolean
+              description: Whether to enable safe search.
+
+    GrokXSource:
+      allOf:
+        - $ref: '#/components/schemas/GrokSource'
+        - type: object
+          properties:
+            x_handles:
+              type: array
+              items:
+                type: string
+              description: List of X handles to consider.
+
+    GrokNewsSource:
+      allOf:
+        - $ref: '#/components/schemas/GrokSource'
+        - type: object
+          properties:
+            country:
+              type: string
+              description: ISO alpha-2 country code.
+            excluded_websites:
+              type: array
+              items:
+                type: string
+              maxItems: 5
+              description: List of websites to exclude.
+            safe_search:
+              type: boolean
+              description: Whether to enable safe search.
+
+    GrokRssSource:
+      allOf:
+        - $ref: '#/components/schemas/GrokSource'
+        - type: object
+          properties:
+            links:
+              type: array
+              items:
+                type: string
+              maxItems: 1
+              description: List of RSS feed URLs (currently limited to one).
 
   securitySchemes:
     ApiKeyAuth:

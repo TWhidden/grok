@@ -17,3 +17,4 @@ obj/
 **/TestResults
 
 **/.vs
+/src/GrokSdk/artifacts

@@ -1,5 +1,3 @@
-# GenerateClient.ps1
-
 # Define paths and parameters
 $swaggerFile = "grok-api.yaml"
 $outputFile = "GrokClient.cs"
@@ -38,7 +36,7 @@ Write-Host "Class Name: $className" -ForegroundColor Yellow
 Write-Host "Full NSwag Command: $nswagCommand" -ForegroundColor Magenta
 Write-Host "Running NSwag code generation..." -ForegroundColor Cyan
 
-# Execute the command and capture output
+# Execute the NSwag command and capture output
 try {
     $output = Invoke-Expression $nswagCommand 2>&1
     Write-Host "NSwag Output:" -ForegroundColor Cyan
@@ -48,14 +46,40 @@ try {
     if (Test-Path $outputFile) {
         Write-Host "Success: Generated $outputFile" -ForegroundColor Green
         Write-Host "File Path: $projectDir\$outputFile" -ForegroundColor Green
-        Write-Host "Next Steps: Add $outputFile to your project and extend with partial class if needed." -ForegroundColor Green
     } else {
         Write-Error "Failed to generate $outputFile. No output file detected."
         Write-Host "Review the NSwag output above for errors." -ForegroundColor Red
+        exit 1
     }
 } catch {
     Write-Error "Exception occurred during NSwag execution: $_"
     Write-Host "Review the NSwag command and output above for details." -ForegroundColor Red
+    exit 1
 }
 
-Write-Host "Generation process completed." -ForegroundColor Cyan
+# Post-process the generated file to replace error messages
+Write-Host "Post-processing $outputFile to update error messages..." -ForegroundColor Cyan
+try {
+    # Read the generated file content
+    $fileContent = Get-Content -Path $outputFile -Raw
+
+    # Define the pattern to match throw statements with any hardcoded message
+    $pattern = '(throw new GrokSdkException<GrokErrorResponse>\()"(.*?)"(,\s*status_,\s*objectResponse_\.Text,\s*headers_,\s*objectResponse_\.Object,\s*null\);)'
+
+    # Define the replacement to use the dynamic error message with the original as fallback
+    $replacementPattern = '${1}(objectResponse_.Object.Error ?? "${2}")${3}'
+
+    # Perform the replacement
+    $modifiedContent = $fileContent -replace $pattern, $replacementPattern
+
+    # Write the modified content back to the file
+    Set-Content -Path $outputFile -Value $modifiedContent -Encoding UTF8
+
+    Write-Host "Success: Updated error messages in $outputFile" -ForegroundColor Green
+} catch {
+    $exception = $_
+    Write-Error "Failed to post-process ${outputFile}: $exception"
+    Write-Host "The generated file remains unchanged." -ForegroundColor Red
+}
+
+Write-Host "Generation and post-processing completed." -ForegroundColor Cyan

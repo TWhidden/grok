@@ -33,9 +33,11 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         return apiKey;
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveToolChoice_DemonstratesModes()
+    public async Task CreateChatCompletionAsync_LiveToolChoice_DemonstratesModes(string model)
     {
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
@@ -73,7 +75,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                 new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
                 new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
             },
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -119,7 +121,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                 new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
                 new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
             },
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -154,7 +156,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                 new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
                 new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
             },
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -187,9 +189,11 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         await WaitForRateLimitAsync();
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveToolChoice_ReturnsParisTemperature()
+    public async Task CreateChatCompletionAsync_LiveToolChoice_ReturnsParisTemperature(string model)
     {
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
@@ -230,7 +234,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         var request = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -281,7 +285,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             var followUpRequest = new GrokChatCompletionRequest
             {
                 Messages = messages,
-                Model = "grok-3-latest",
+                Model = model,
                 Stream = false,
                 Temperature = 0f,
                 Tools = grokTools,
@@ -314,9 +318,11 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         }
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveToolChoice_FetchesInternationalSpaceStation()
+    public async Task CreateChatCompletionAsync_LiveToolChoice_FetchesInternationalSpaceStation(string model)
     {
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
@@ -359,7 +365,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         var request = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -454,7 +460,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             var followUpRequest = new GrokChatCompletionRequest
             {
                 Messages = messages,
-                Model = "grok-3-latest",
+                Model = model,
                 Stream = false,
                 Temperature = 0f,
                 Tools = grokTools,
@@ -494,9 +500,11 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         await WaitForRateLimitAsync();
     }
 
-    [TestMethod]
+    [DataTestMethod]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-2-latest")]
     [TestCategory("Live")]
-    public async Task CreateChatCompletionAsync_LiveToolChoice_AskStarlinkSatelliteCount()
+    public async Task CreateChatCompletionAsync_LiveToolChoice_AskStarlinkSatelliteCount(string model)
     {
         var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
@@ -549,7 +557,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         var request = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-3-latest",
+            Model = model,
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
@@ -590,7 +598,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                 var followUpRequest = new GrokChatCompletionRequest
                 {
                     Messages = messages,
-                    Model = "grok-3-latest",
+                    Model = model,
                     Stream = false,
                     Temperature = 0f,
                     Tools = grokTools,

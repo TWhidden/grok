@@ -218,7 +218,7 @@ public class GrokThread(GrokClient client)
                         }
                     }).ToList()
                     : null,
-                Tool_choice = _tools.Any() ? Tool_choice.Auto : null
+                Tool_choice = _tools.Any() ? Tool_choice.Auto : null,
             };
 
             channel.Writer.TryWrite(new GrokStreamState(StreamState.Streaming));
