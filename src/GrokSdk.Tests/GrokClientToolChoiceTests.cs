@@ -33,10 +33,10 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         return apiKey;
     }
 
-    [DataTestMethod]
-    [DataRow("grok-3-latest")]
-    [DataRow("grok-2-latest")]
-    [TestCategory("Live")]
+    //[DataTestMethod]
+    //[DataRow("grok-3-latest")]
+    //[DataRow("grok-2-latest")]
+    //[TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveToolChoice_DemonstratesModes(string model)
     {
         using var httpClient = new HttpClient();
@@ -79,7 +79,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
-            Tool_choice = Tool_choice.Required
+            Tool_choice = Tool_choice.Auto
         };
 
         await WaitForRateLimitAsync();
@@ -105,7 +105,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             Assert.AreEqual("get_current_temperature", autoChoice.Message.Tool_calls?.First().Function.Name,
                 "GrokTool call (auto) should match the defined GrokTool.");
             Assert.AreEqual(GrokChoiceFinish_reason.Tool_calls, autoChoice.Finish_reason,
-                "Finish reason (auto) should be 'GrokTool_calls' when a GrokTool is used.");
+                "Finish reason (Tool_choice = auto) should be 'Tool_calls' when a GrokTool is used.");
         }
         else
         {

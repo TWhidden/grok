@@ -72,7 +72,7 @@ public class GrokClientReasoningTests : GrokClientTestBaseClass
 
         // Assert that high effort uses more reasoning tokens
         Assert.IsTrue(reasoningTokensHigh > reasoningTokensLow,
-            "High effort should use more reasoning tokens than low effort.");
+            $"High effort should use more reasoning tokens than low effort. reasoningTokensHigh ({reasoningTokensHigh}) > reasoningTokensLow ({reasoningTokensLow})");
 
         // Check that reasoning_content is present for both
         Assert.IsFalse(string.IsNullOrEmpty(reasoningContentLow),
