@@ -16,6 +16,7 @@ public class GrokClientTests : GrokClientTestBaseClass
     [DataTestMethod]
     [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveHelloWorld_ReturnsValidResponse(string model)
     {
@@ -61,6 +62,7 @@ public class GrokClientTests : GrokClientTestBaseClass
     [DataTestMethod]
     [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveHelloWorldArray_ReturnsValidResponse(string model)
     {
@@ -119,6 +121,7 @@ public class GrokClientTests : GrokClientTestBaseClass
     [DataTestMethod]
     [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveConversation_MaintainsContext(string model)
     {
@@ -244,6 +247,7 @@ public class GrokClientTests : GrokClientTestBaseClass
     [DataTestMethod]
     [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveCommandRoast_ReturnsRoastMessage(string model)
     {
@@ -368,6 +372,7 @@ public class GrokClientTests : GrokClientTestBaseClass
     [DataTestMethod]
     [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveStreaming_ReturnsStreamedResponse(string model)
     {
@@ -445,6 +450,7 @@ public class GrokClientTests : GrokClientTestBaseClass
     [DataTestMethod]
     [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task GrokThread_AskMultipleQuestions_MaintainsContextAndStreamsResponses(string model)
     {
@@ -557,6 +563,7 @@ public class GrokClientTests : GrokClientTestBaseClass
     [DataTestMethod]
     [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task GrokThread_SystemMessages_InfluenceResponses(string model)
     {
@@ -693,8 +700,8 @@ public class GrokClientTests : GrokClientTestBaseClass
         Assert.IsFalse(response4.Split(' ').Length == 1,
             "Response should not be one word due to last Spanish instruction.");
         Assert.IsTrue(response4.Contains("no", StringComparison.OrdinalIgnoreCase) ||
-                      response4.Contains("sé", StringComparison.OrdinalIgnoreCase),
-            "Response should be in Spanish, likely indicating 'I don’t know' (e.g., 'No sé').");
+                      response4.Contains("sï¿½", StringComparison.OrdinalIgnoreCase),
+            "Response should be in Spanish, likely indicating 'I donï¿½t know' (e.g., 'No sï¿½').");
 
         // Safety Check for Live Unit Tests to prevent API exhaustion
         await WaitForRateLimitAsync();

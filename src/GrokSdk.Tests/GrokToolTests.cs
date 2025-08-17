@@ -439,6 +439,7 @@ public class GrokToolTests : GrokClientTestBaseClass
     [TestMethod]
     [DataRow("grok-2-latest")]
     [DataRow("grok-3-latest")]
+    [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task GrokThread_WithLiveSearchTool_PerformsWebSearch(string model)
     {
