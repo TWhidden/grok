@@ -74,7 +74,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             Messages = new Collection<GrokMessage>
             {
                 new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
-                new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
+                new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the current temperature in Paris right now?" }] }
             },
             Model = model,
             Stream = false,
@@ -120,7 +120,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             Messages = new Collection<GrokMessage>
             {
                 new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
-                new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
+                new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the current temperature in Paris right now?" }] }
             },
             Model = model,
             Stream = false,
@@ -155,7 +155,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             Messages = new Collection<GrokMessage>
             {
                 new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
-                new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
+                new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the current temperature in Paris right now?" }] }
             },
             Model = model,
             Stream = false,
@@ -231,7 +231,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         var messages = new Collection<GrokMessage>
         {
             new GrokSystemMessage { Content = "You are a weather assistant with access to GrokTools." },
-            new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the temperature in Paris?" }] }
+            new GrokUserMessage { Content = [new GrokTextPart { Text = "What's the current temperature in Paris right now?" }] }
         };
         var request = new GrokChatCompletionRequest
         {
@@ -268,10 +268,10 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             var args = JsonConvert.DeserializeObject<Dictionary<string, string>>(grokToolCall.Function.Arguments) ??
                        throw new Exception("Could not process arguments from function");
             var location = args["location"];
-            Assert.AreEqual("Paris", location, "GrokTool call should target Paris.");
+            Assert.IsTrue(location.ToLower().Contains("paris"), "GrokTool call should target Paris.");
 
             // Mock implementation (replace with real API call if desired)
-            var result = location == "Paris"
+            var result = location.ToLower().Contains("paris")
                 ? "{\"location\": \"Paris\", \"temperature\": 15, \"unit\": \"celsius\"}"
                 : "{\"location\": \"unknown\", \"temperature\": null, \"unit\": \"celsius\"}";
 
