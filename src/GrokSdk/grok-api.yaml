@@ -12,7 +12,7 @@ paths:
       summary: Create a chat completion with Grok
       description: |
         Generates a chat completion using the specified model. 
-        For reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta), 
+        For reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast), 
         use the `reasoning_effort` parameter to control thinking effort and access 
         the reasoning trace via `reasoning_content` and token details via `completion_tokens_details`.
       operationId: createChatCompletion
@@ -130,7 +130,7 @@ components:
             - high
           nullable: true
           default: null
-          description: Controls how much time the model spends thinking before responding. Only applicable for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta). 'low' for quick responses, 'high' for complex reasoning.
+          description: Controls how much time the model spends thinking before responding. Only applicable for reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast). 'low' for quick responses, 'high' for complex reasoning.
         search_parameters:
           $ref: '#/components/schemas/GrokSearchParameters'
           description: Parameters for live search functionality. Optional and defaults to null if not provided.
@@ -238,7 +238,7 @@ components:
               description: List of tool calls requested by the assistant
             reasoning_content:
               type: string
-              description: The model's thought process before generating the response. Only present for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta).
+              description: The model's thought process before generating the response. Only present for reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast).
           required:
             - content
 
@@ -402,7 +402,7 @@ components:
           $ref: '#/components/schemas/GrokPromptTokensDetails'
         completion_tokens_details:
           $ref: '#/components/schemas/GrokCompletionTokensDetails'
-          description: Details about completion tokens, including reasoning tokens for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta).
+          description: Details about completion tokens, including reasoning tokens for reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast).
       required:
         - prompt_tokens
         - completion_tokens

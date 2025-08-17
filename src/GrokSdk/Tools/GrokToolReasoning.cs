@@ -73,9 +73,9 @@ public class GrokToolReasoning : IGrokTool
     ///     Initializes a new instance of <see cref="GrokToolReasoning" /> with a Grok client and an optional model.
     /// </summary>
     /// <param name="client">The <see cref="GrokClient" /> instance used to make API calls.</param>
-    /// <param name="grokModel">The Grok model to use for reasoning. Defaults to "grok-3-mini-beta".</param>
+    /// <param name="grokModel">The Grok model to use for reasoning. Defaults to "grok-3-mini".</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="client" /> is null.</exception>
-    public GrokToolReasoning(GrokClient client, string grokModel = "grok-3-mini-beta")
+    public GrokToolReasoning(GrokClient client, string grokModel = "grok-3-mini")
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _grokModel = grokModel;

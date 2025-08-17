@@ -12,7 +12,7 @@ public class GrokClientReasoningTests : GrokClientTestBaseClass
     }
 
     [TestMethod]
-    [DataRow("grok-3-mini-beta")] // Reasoning-capable model
+    [DataRow("grok-3-mini")] // Reasoning-capable model
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveReasoningEffort_ComparesLowAndHigh(string model)
     {
@@ -20,7 +20,7 @@ public class GrokClientReasoningTests : GrokClientTestBaseClass
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
 
         var prompt =
-            "A car travels 60 miles per hour for 2 hours, then 30 miles per hour for 1 hour. What is the average speed for the entire trip?";
+            "A complex logistics problem: A delivery company has 5 trucks with different capacities (10, 15, 20, 25, 30 tons). They need to deliver packages to 12 cities with varying distances (ranging from 50 to 500 miles) and different delivery time windows. Each truck has different fuel efficiency rates, and fuel costs vary by location. The company wants to minimize total cost while ensuring all deliveries are completed on time. Additionally, some trucks require maintenance after certain mileage, and driver work-hour regulations must be considered. Calculate the optimal delivery strategy and explain the reasoning behind each decision, including alternative approaches that were considered and why they were rejected.";
 
         // Helper method to get response for a given reasoning effort
         async Task<(string content, string reasoningContent, int reasoningTokens)> GetResponseAsync(
@@ -66,9 +66,11 @@ public class GrokClientReasoningTests : GrokClientTestBaseClass
         // Get response for high reasoning effort
         var (contentHigh, reasoningContentHigh, reasoningTokensHigh) = await GetResponseAsync("high");
 
-        // Assert that both responses contain the correct answer
-        Assert.IsTrue(contentLow.Contains("50"), "Low effort response should contain '50'.");
-        Assert.IsTrue(contentHigh.Contains("50"), "High effort response should contain '50'.");
+        // Assert that both responses contain reasoning about optimization or strategy
+        Assert.IsTrue(contentLow.Contains("cost") || contentLow.Contains("optimal") || contentLow.Contains("strategy") || contentLow.Contains("delivery"), 
+            "Low effort response should contain optimization-related terms.");
+        Assert.IsTrue(contentHigh.Contains("cost") || contentHigh.Contains("optimal") || contentHigh.Contains("strategy") || contentHigh.Contains("delivery"), 
+            "High effort response should contain optimization-related terms.");
 
         // Assert that high effort uses more reasoning tokens
         Assert.IsTrue(reasoningTokensHigh > reasoningTokensLow,

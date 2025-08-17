@@ -75,7 +75,7 @@ namespace GrokSdk
         /// </summary>
         /// <remarks>
         /// Generates a chat completion using the specified model. 
-        /// <br/>For reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta), 
+        /// <br/>For reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast), 
         /// <br/>use the `reasoning_effort` parameter to control thinking effort and access 
         /// <br/>the reasoning trace via `reasoning_content` and token details via `completion_tokens_details`.
         /// </remarks>
@@ -92,7 +92,7 @@ namespace GrokSdk
         /// </summary>
         /// <remarks>
         /// Generates a chat completion using the specified model. 
-        /// <br/>For reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta), 
+        /// <br/>For reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast), 
         /// <br/>use the `reasoning_effort` parameter to control thinking effort and access 
         /// <br/>the reasoning trace via `reasoning_content` and token details via `completion_tokens_details`.
         /// </remarks>
@@ -445,7 +445,7 @@ namespace GrokSdk
         public Tool_choice? Tool_choice { get; set; }
 
         /// <summary>
-        /// Controls how much time the model spends thinking before responding. Only applicable for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta). 'low' for quick responses, 'high' for complex reasoning.
+        /// Controls how much time the model spends thinking before responding. Only applicable for reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast). 'low' for quick responses, 'high' for complex reasoning.
         /// </summary>
         [Newtonsoft.Json.JsonProperty("reasoning_effort", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
@@ -593,7 +593,7 @@ namespace GrokSdk
         public System.Collections.Generic.ICollection<GrokToolCall> Tool_calls { get; set; }
 
         /// <summary>
-        /// The model's thought process before generating the response. Only present for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta).
+        /// The model's thought process before generating the response. Only present for reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast).
         /// </summary>
         [Newtonsoft.Json.JsonProperty("reasoning_content", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Reasoning_content { get; set; }
@@ -839,7 +839,7 @@ namespace GrokSdk
         public GrokPromptTokensDetails Prompt_tokens_details { get; set; }
 
         /// <summary>
-        /// Details about completion tokens, including reasoning tokens for reasoning-capable models (e.g., grok-3-mini-beta, grok-3-mini-fast-beta).
+        /// Details about completion tokens, including reasoning tokens for reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast).
         /// </summary>
         [Newtonsoft.Json.JsonProperty("completion_tokens_details", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public GrokCompletionTokensDetails Completion_tokens_details { get; set; }
