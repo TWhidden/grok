@@ -735,4 +735,53 @@ public class GrokClientTests : GrokClientTestBaseClass
         // Safety Check for Live Unit Tests to prevent API exhaustion
         await WaitForRateLimitAsync();
     }
+
+    [TestMethod]
+    public void GrokThread_ThreadTokens_EstimatesTokensCorrectly()
+    {
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, "dummy");
+        var thread = new GrokThread(client);
+        thread.AddUserMessage("Hello world"); // 11 chars
+        Assert.AreEqual(3, thread.ThreadTokens); // (11+3)/4 = 3
+        thread.AddUserMessage("This is a longer message with more text."); // 40 chars
+        Assert.AreEqual(13, thread.ThreadTokens); // (51+3)/4 = 13
+    }
+
+    [TestMethod]
+    public void GrokThread_HistoryTrimming_WithMaxMessagesInHistory_KeepsSystemAndLastMessages()
+    {
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, "dummy");
+        var options = new GrokThreadOptions { MaxMessagesInHistory = 3 };
+        var thread = new GrokThread(client, options);
+
+        // Add system message
+        thread.AddSystemInstruction("You are a helpful assistant.");
+
+        // Add user messages
+        thread.AddUserMessage("Message 1");
+        thread.AddUserMessage("Message 2");
+        thread.AddUserMessage("Message 3");
+        thread.AddUserMessage("Message 4"); // This should cause trimming
+
+        // History should have: System + Message 3 + Message 4 (last 2 user messages)
+        var history = thread.History.ToList();
+        Assert.AreEqual(3, history.Count);
+        Assert.IsInstanceOfType(history[0], typeof(GrokSystemMessage));
+        Assert.AreEqual("You are a helpful assistant.", ((GrokSystemMessage)history[0]).Content);
+        Assert.IsInstanceOfType(history[1], typeof(GrokUserMessage));
+        Assert.AreEqual("Message 3", ((GrokTextPart)((GrokUserMessage)history[1]).Content.First()).Text);
+        Assert.IsInstanceOfType(history[2], typeof(GrokUserMessage));
+        Assert.AreEqual("Message 4", ((GrokTextPart)((GrokUserMessage)history[2]).Content.First()).Text);
+    }
+
+    [TestMethod]
+    public void GrokThread_TotalTokensUsed_StartsAtZero()
+    {
+        using var httpClient = new HttpClient();
+        var client = new GrokClient(httpClient, "dummy");
+        var thread = new GrokThread(client);
+        Assert.AreEqual(0, thread.TotalTokensUsed);
+    }
 }
