@@ -14,8 +14,9 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveHelloWorld_ReturnsValidResponse(string model)
@@ -28,7 +29,7 @@ public class GrokClientTests : GrokClientTestBaseClass
             Messages = new Collection<GrokMessage>
             {
                 new GrokSystemMessage { Content = "You are a test assistant." },
-                new GrokUserMessage { Content = [new GrokTextPart { Text = "Say exactly \"hello world\"" }] }
+                new GrokUserMessage { Content = [new GrokTextPart { Text = "Output only the text 'hello world'. Do not include any other text, explanations, or formatting." }] }
             },
             Model = model,
             Stream = false,
@@ -60,8 +61,9 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveHelloWorldArray_ReturnsValidResponse(string model)
@@ -78,7 +80,7 @@ public class GrokClientTests : GrokClientTestBaseClass
                 {
                     Content = new List<GrokContent>
                     {
-                        new GrokTextPart { Text = "Say exactly \"hello world\"" }
+                        new GrokTextPart { Text = "Output only the text 'hello world'. Do not include any other text, explanations, or formatting." }
                     }
                 }
             },
@@ -119,8 +121,9 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveConversation_MaintainsContext(string model)
@@ -245,8 +248,9 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveCommandRoast_ReturnsRoastMessage(string model)
@@ -370,8 +374,9 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveStreaming_ReturnsStreamedResponse(string model)
@@ -463,8 +468,9 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task GrokThread_AskMultipleQuestions_MaintainsContextAndStreamsResponses(string model)
@@ -576,8 +582,9 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-3-latest")]
     [DataRow("grok-2-latest")]
+    [DataRow("grok-3-latest")]
+    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task GrokThread_SystemMessages_InfluenceResponses(string model)
@@ -636,7 +643,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         }
 
         // **Step 1: One-word response**
-        thread.AddSystemInstruction("Respond with only one word.");
+        thread.AddSystemInstruction("Respond with only the answer, as a single word. No additional text.");
         var question1 = "What is the capital of France?";
         await WaitForRateLimitAsync();
         var messages1 = await CollectMessagesAsync(question1);
@@ -651,12 +658,12 @@ public class GrokClientTests : GrokClientTestBaseClass
         // Extract and verify response
         var response1 = ExtractResponse(messages1);
         Assert.IsFalse(string.IsNullOrEmpty(response1), "Response should not be empty.");
-        Assert.AreEqual("Paris", response1.Trim(), "Response should be a single word 'France'.");
+        Assert.AreEqual("Paris", response1.Trim(), "Response should be a single word 'Paris'.");
         Assert.IsFalse(response1.Contains(" "), "Response should contain no spaces, indicating one word.");
 
         // **Step 2: JSON response**
-        thread.AddSystemInstruction("Respond with raw JSON without markdown.");
-        var question2 = "What is the population of France?";
+        thread.AddSystemInstruction("Respond only with a valid JSON object. Do not include any other text, explanations, or markdown formatting.");
+        var question2 = "Provide the population of France as a JSON object with a 'population' field.";
         await WaitForRateLimitAsync();
         var messages2 = await CollectMessagesAsync(question2);
 
@@ -673,20 +680,7 @@ public class GrokClientTests : GrokClientTestBaseClass
         Assert.IsTrue(IsValidJson(response2), "Response should be valid JSON.");
         dynamic jsonResponse = JsonConvert.DeserializeObject(response2)!;
         
-        // More flexible population field validation - check for various possible field names
-        var hasPopulationData = jsonResponse.population != null || 
-                               jsonResponse.Population != null ||
-                               jsonResponse.populationCount != null ||
-                               jsonResponse.people != null ||
-                               jsonResponse.inhabitants != null ||
-                               jsonResponse.size != null ||
-                               jsonResponse.count != null ||
-                               (jsonResponse.ToString().ToLower().Contains("population") ||
-                                jsonResponse.ToString().ToLower().Contains("million") ||
-                                jsonResponse.ToString().ToLower().Contains("people"));
-        
-        Assert.IsTrue(hasPopulationData, 
-            $"JSON should contain population-related information. Actual JSON: {response2}");
+        Assert.IsNotNull(jsonResponse.population, $"JSON should contain a 'population' field. Actual JSON: {response2}");
 
         // **Step 3: Spanish translation**
         thread.AddSystemInstruction("Translate all responses to Spanish. Do not respond in JSON anymore");

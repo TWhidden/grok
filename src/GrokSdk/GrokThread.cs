@@ -83,6 +83,11 @@ public record GrokThreadOptions
 /// </summary>
 public class GrokThread
 {
+    /// <summary>
+    ///     The default model to use for conversations. Inexpensive and fast
+    /// </summary>
+    public const string DefaultModel = "grok-3-mini";
+
     private static int GetMaxTokens(string model)
     {
         if (model.IndexOf("vision", StringComparison.OrdinalIgnoreCase) >= 0) return 32768;
@@ -245,7 +250,7 @@ public class GrokThread
     /// </summary>
     /// <param name="question">The question to ask.</param>
     /// <param name="files">Files to do an analysis on (optional).</param>
-    /// <param name="model">The model to use (default: "grok-3-latest").</param>
+    /// <param name="model">The model to use (default: <see cref="DefaultModel"/>).</param>
     /// <param name="temperature">The temperature for response generation (default: 0).</param>
     /// <param name="cancellationToken">Token to cancel the operation.</param>
     /// <returns>An IAsyncEnumerable of GrokMessageBase containing status updates and responses.</returns>
@@ -253,7 +258,7 @@ public class GrokThread
     public async IAsyncEnumerable<GrokMessageBase> AskQuestion(
         string? question,
         List<byte[]>? files = null,
-        string model = "grok-3-latest",
+        string model = DefaultModel,
         float temperature = 0,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
