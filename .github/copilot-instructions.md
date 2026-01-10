@@ -1,5 +1,67 @@
 # GrokSdk Development Guide
 
+## Coding Principles & Standards
+
+**You are an expert-level C# developer** with deep knowledge of SOLID principles, design patterns, and .NET best practices. All code contributions must adhere to professional software engineering standards.
+
+### Core Development Principles
+
+**Single Responsibility Principle (SRP)**: Each class, method, and component should have one clear responsibility. If a class does more than one thing, refactor it into multiple focused components.
+
+**DRY (Don't Repeat Yourself)**: Eliminate code duplication through proper abstractions, base classes, extension methods, or shared utilities. Repeated logic should be extracted into reusable components.
+
+**API Stability**: Preserve existing public APIs unless explicitly requested to make breaking changes. When adding features:
+- Extend via new methods/overloads rather than modifying signatures
+- Use optional parameters for backward compatibility
+- Mark obsolete APIs with `[Obsolete]` before removal
+- Follow semantic versioning principles
+
+**Simplicity First**: Keep changes minimal and focused. Prefer simple, readable solutions over clever complexity. Each change should do one thing well.
+
+**Documentation Synchronization**: When modifying public APIs or adding new features, update the README.md files to stay in sync with the code. Documentation should reflect:
+- New public methods, classes, and interfaces
+- Changed method signatures or behavior
+- New features and usage examples
+- Breaking changes and migration guidance
+
+### Expert C# Design Patterns
+
+**Abstractions & Interfaces**: 
+- Define contracts via interfaces (`IGrokTool`, `IGrokClient`) to enable testability and extensibility
+- Use abstract base classes for shared implementation (`GrokMessageBase`)
+- Favor composition over inheritance where appropriate
+- Apply dependency injection for loose coupling
+
+**Type Safety**: 
+- Leverage C# record types for immutable data transfer objects (`GrokTextMessage`, `GrokStreamState`)
+- Use discriminated unions via inheritance hierarchies for type-safe message handling
+- Prefer strongly-typed parameters over stringly-typed dictionaries
+- Apply nullable reference types to eliminate null reference exceptions
+
+**Async/Await Best Practices**:
+- All I/O operations must be async (`IAsyncEnumerable<T>` for streams)
+- Avoid `async void` except for event handlers
+- Use `ConfigureAwait(false)` in library code to prevent deadlocks
+- Properly dispose async resources with `await using`
+
+**SOLID Principles**:
+- **Open/Closed**: Tools system extensible via `IGrokTool` without modifying core library
+- **Liskov Substitution**: Message types interchangeable via `GrokMessageBase`
+- **Interface Segregation**: Focused interfaces like `IGrokTool` vs. monolithic contracts
+- **Dependency Inversion**: Depend on abstractions (`IGrokTool`) not concretions
+
+**Defensive Programming**:
+- Validate inputs at public API boundaries
+- Provide meaningful exception messages
+- Use guard clauses to fail fast
+- Document preconditions and invariants
+
+**Code Organization**:
+- Namespace structure matches folder hierarchy
+- Internal implementation details marked `internal` or `private`
+- Public API surface kept minimal and intentional
+- Related functionality grouped into cohesive classes
+
 ## Architecture Overview
 
 GrokSdk is a .NET library providing a streaming conversation interface to xAI's Grok API. The architecture centers around three core components:
