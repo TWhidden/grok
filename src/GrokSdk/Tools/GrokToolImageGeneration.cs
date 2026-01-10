@@ -123,18 +123,15 @@ public class GrokToolImageGeneration : IGrokTool
     /// <summary>
     ///     Gets the JSON schema for the tool's parameters.
     /// </summary>
-    public object Parameters => new Dictionary<string, object>
+    public object Parameters => new
     {
-        { "prompt", new Dictionary<string, object> { { "type", "string" } } },
+        type = "object",
+        required = new[] { "prompt" },
+        properties = new
         {
-            "n",
-            new Dictionary<string, object>
-                { { "type", "integer" }, { "minimum", 1 }, { "maximum", 10 }, { "default", 1 } }
-        },
-        {
-            "response_format",
-            new Dictionary<string, object>
-                { { "type", "string" }, { "enum", new[] { "url", "base64" } }, { "default", "url" } }
+            prompt = new { type = "string", description = "The text prompt describing the image to generate." },
+            n = new { type = "integer", minimum = 1, maximum = 10, @default = 1, description = "The number of images to generate (1-10)." },
+            response_format = new { type = "string", @enum = new[] { "url", "base64" }, @default = "url", description = "The response format: 'url' for image URLs or 'base64' for base64-encoded data." }
         }
     };
 

@@ -95,14 +95,21 @@ public class GrokToolReasoning : IGrokTool
     /// <summary>
     ///     Gets the JSON schema for the tool's parameters, expecting a 'problem' string and an optional 'effort' string.
     /// </summary>
-    public object Parameters => new Dictionary<string, object>
+    public object Parameters => new
     {
-        { "problem", new Dictionary<string, object> { { "type", "string" } } },
+        type = "object",
+        properties = new
         {
-            "effort",
-            new Dictionary<string, object>
-                { { "type", "string" }, { "enum", new[] { "low", "high" } }, { "default", "low" } }
-        }
+            problem = new { type = "string", description = "The problem or question to reason about." },
+            effort = new
+            {
+                type = "string",
+                @enum = new[] { "low", "high" },
+                @default = "low",
+                description = "The effort level for reasoning: 'low' for basic analysis, 'high' for detailed reasoning."
+            }
+        },
+        required = new[] { "problem" }
     };
 
     /// <summary>

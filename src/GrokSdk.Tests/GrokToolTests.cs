@@ -100,6 +100,8 @@ public class GrokToolTests : GrokClientTestBaseClass
         await foreach (var message in thread.AskQuestion(userMessage))
             if (message is GrokToolResponse { ToolName: GrokToolImageGeneration.ToolName } toolResponse1)
             {
+            if (message is not GrokToolResponse { ToolName: GrokToolImageGeneration.ToolName } toolResponse1) continue;
+
                 toolCalled = true;
                 toolResponseJson = toolResponse1.ToolResponse;
                 break; // Assuming only one tool call for simplicity
