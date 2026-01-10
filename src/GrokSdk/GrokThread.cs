@@ -106,7 +106,7 @@ public class GrokThread
     private string? _lastSystemInstruction;
 
     private int _maxTokens = 131072; // Default, updated per model
-    private readonly GrokThreadOptions _options;
+    private GrokThreadOptions _options;
     private long _totalTokensUsed;
 
     private int HistoryCount => (_systemMessage != null ? 1 : 0) + _conversationQueue.Count;
@@ -127,6 +127,22 @@ public class GrokThread
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _options = options;
+    }
+
+    /// <summary>
+    /// Gets the current thread options.
+    /// </summary>
+    public GrokThreadOptions CurrentOptions => _options;
+
+    /// <summary>
+    /// Updates the thread options. Changes take effect immediately for new operations.
+    /// </summary>
+    /// <param name="newOptions">The new options to apply.</param>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="newOptions"/> is null.</exception>
+    public void UpdateOptions(GrokThreadOptions newOptions)
+    {
+        _options = newOptions ?? throw new ArgumentNullException(nameof(newOptions));
+        ApplyOptionsToCurrentState();
     }
 
     /// <summary>
@@ -218,6 +234,14 @@ public class GrokThread
         if (!_tools.TryAdd(tool.Name, tool))
             throw new ArgumentException($"A tool with name '{tool.Name}' already exists.");
 #endif
+    }
+
+    /// <summary>
+    /// Applies the current options to the existing conversation state, performing any necessary cleanup.
+    /// </summary>
+    private void ApplyOptionsToCurrentState()
+    {
+        TrimQueue();
     }
 
     private int EstimateTokens(IEnumerable<GrokMessage> messages)
