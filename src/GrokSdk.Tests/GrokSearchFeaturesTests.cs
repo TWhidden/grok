@@ -19,8 +19,8 @@ public class GrokSearchFeaturesTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task TestLiveSearch_ModeOn(string model)
     {
@@ -74,8 +74,8 @@ public class GrokSearchFeaturesTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task TestLiveSearch_ModeOff(string model)
     {
@@ -128,8 +128,8 @@ public class GrokSearchFeaturesTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task TestLiveSearch_XSource(string model)
     {

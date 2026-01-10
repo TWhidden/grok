@@ -86,7 +86,7 @@ public class GrokThread
     /// <summary>
     ///     The default model to use for conversations. Inexpensive and fast
     /// </summary>
-    public const string DefaultModel = "grok-3-mini";
+    public const string DefaultModel = "grok-4-fast";
 
     private static int GetMaxTokens(string model)
     {

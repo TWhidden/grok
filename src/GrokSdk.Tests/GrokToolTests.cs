@@ -98,14 +98,13 @@ public class GrokToolTests : GrokClientTestBaseClass
         string? toolResponseJson = null;
 
         await foreach (var message in thread.AskQuestion(userMessage))
-            if (message is GrokToolResponse { ToolName: GrokToolImageGeneration.ToolName } toolResponse1)
-            {
+        {
             if (message is not GrokToolResponse { ToolName: GrokToolImageGeneration.ToolName } toolResponse1) continue;
 
-                toolCalled = true;
-                toolResponseJson = toolResponse1.ToolResponse;
-                break; // Assuming only one tool call for simplicity
-            }
+            toolCalled = true;
+            toolResponseJson = toolResponse1.ToolResponse;
+            break; // Assuming only one tool call for simplicity
+        }
 
         Assert.IsNotNull(toolResponseJson, "toolResponseJson was null");
         Assert.IsTrue(toolCalled, $"The '{GrokToolImageGeneration.ToolName}' tool was not called.");
@@ -438,10 +437,10 @@ public class GrokToolTests : GrokClientTestBaseClass
             "Error message should indicate invalid date format.");
     }
 
-    [TestMethod]
-    [DataRow("grok-2-latest")]
+    [DataTestMethod]
     [DataRow("grok-3-latest")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task GrokThread_WithLiveSearchTool_PerformsWebSearch(string model)
     {

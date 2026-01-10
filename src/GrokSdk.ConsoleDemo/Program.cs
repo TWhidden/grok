@@ -14,7 +14,7 @@ internal class Program
         var thread = new GrokThread(sdk);
 
         // Set initial model
-        string currentModel = "grok-2-latest";
+        string currentModel = "grok-4-fast";
 
         // Register some pre-made tools
         thread.RegisterTool(new GrokToolImageGeneration(sdk));
@@ -23,7 +23,7 @@ internal class Program
         thread.RegisterTool(new GrokToolImageUnderstanding(sdk));
 
         // Welcome message with instructions
-        Console.WriteLine("Welcome to the Grok Chat Console. Type your questions below. Type 'quit' to exit. Press 'm' to switch between models (grok-2-latest and grok-3-latest).");
+        Console.WriteLine("Welcome to the Grok Chat Console. Type your questions below. Type 'quit' to exit. Press 'm' to switch between models (grok-3 and grok-4-fast).");
 
         // Main interaction loop
         while (true)
@@ -40,7 +40,7 @@ internal class Program
             // Check for model switch hotkey
             if (input.Trim().ToLower() == "m")
             {
-                currentModel = currentModel == "grok-3-latest" ? "grok-2-latest" : "grok-3-latest";
+                currentModel = currentModel == "grok-3" ? "grok-4-fast" : "grok-3";
                 Console.WriteLine($"Switched to model: {currentModel}");
                 continue; // Skip to next iteration
             }

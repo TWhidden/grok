@@ -14,10 +14,14 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-latest")]
+    [DataRow("grok-3")]
     [DataRow("grok-3-latest")]
     [DataRow("grok-3-mini")]
+    [DataRow("grok-4-0709")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
+    [DataRow("grok-4-1-fast-non-reasoning")]
+    [DataRow("grok-4-fast-reasoning")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveHelloWorld_ReturnsValidResponse(string model)
     {
@@ -61,10 +65,10 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-3-latest")]
     [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveHelloWorldArray_ReturnsValidResponse(string model)
     {
@@ -121,10 +125,10 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-3-latest")]
     [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveConversation_MaintainsContext(string model)
     {
@@ -248,10 +252,10 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-3-latest")]
     [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveCommandRoast_ReturnsRoastMessage(string model)
     {
@@ -337,7 +341,7 @@ public class GrokClientTests : GrokClientTestBaseClass
                 new GrokSystemMessage { Content = "You are Grok, a helpful assistant capable of analyzing images." },
                 new GrokUserMessage { Content = [new GrokTextPart { Text = contentJson }] }
             },
-            Model = "grok-2-vision-latest", // Model that supports image analysis
+            Model = "grok-2-vision-1212", // Model that supports image analysis
             Stream = false,
             Temperature = 0f
         };
@@ -374,10 +378,10 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-3-latest")]
     [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveStreaming_ReturnsStreamedResponse(string model)
     {
@@ -468,10 +472,10 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-3-latest")]
     [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task GrokThread_AskMultipleQuestions_MaintainsContextAndStreamsResponses(string model)
     {
@@ -582,10 +586,10 @@ public class GrokClientTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-3-latest")]
     [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task GrokThread_SystemMessages_InfluenceResponses(string model)
     {

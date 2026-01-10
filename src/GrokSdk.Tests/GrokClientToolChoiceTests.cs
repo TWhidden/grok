@@ -35,7 +35,6 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-4-latest")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveToolChoice_DemonstratesModes(string model)
@@ -192,8 +191,8 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveToolChoice_ReturnsParisTemperature(string model)
     {
@@ -322,8 +321,8 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveToolChoice_FetchesInternationalSpaceStation(string model)
     {
@@ -505,8 +504,8 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-2-latest")]
     [DataRow("grok-4-latest")]
+    [DataRow("grok-4-fast")]
     [TestCategory("Live")]
     public async Task CreateChatCompletionAsync_LiveToolChoice_AskStarlinkSatelliteCount(string model)
     {

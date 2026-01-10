@@ -75,10 +75,20 @@ GrokSdk supports all current xAI Grok models:
 
 | Model | Description | Best For |
 |-------|-------------|----------|
-| `grok-2-latest` | Latest Grok 2 model | General conversations, reasoning |
-| `grok-3-latest` | Latest Grok 3 model | Enhanced capabilities, complex tasks |
-| `grok-4-latest` | Latest Grok 4 model | Most advanced reasoning and understanding |
-| `grok-2-vision-latest` | Grok 2 with vision capabilities | Image analysis and understanding |
+| `grok-4-1-fast-reasoning` | Grok 4.1 fast with reasoning capabilities | High-speed reasoning tasks |
+| `grok-4-1-fast-non-reasoning` | Grok 4.1 fast without reasoning | Fast general conversations |
+| `grok-code-fast-1` | Fast code-focused model | Code generation and understanding |
+| `grok-4-fast-reasoning` | Grok 4 fast with reasoning | Balanced reasoning performance |
+| `grok-4-fast-non-reasoning` | Grok 4 fast without reasoning | Fast responses for general use |
+| `grok-4-0709` | Grok 4 version 0709 | Advanced reasoning and understanding |
+| `grok-3-mini` | Mini version of Grok 3 | Lightweight tasks |
+| `grok-3` | Standard Grok 3 model | General conversations and tasks |
+| `grok-2-vision-1212` | Grok 2 with vision capabilities | Image analysis and understanding |
+
+**Note**: "Latest" tagged models (e.g., `grok-3-latest`, `grok-4-latest`) are also supported and tested for compatibility.
+
+### Image Generation
+- `grok-2-image-1212`: Image generation model
 
 ## 🛠️ Complete Grok API Function Support
 
@@ -204,7 +214,7 @@ internal class Program
         thread.AddSystemInstruction("You are a helpful AI assistant with access to image generation, reasoning, search, and image understanding tools.");
 
         Console.WriteLine("🚀 Grok Chat Console");
-        Console.WriteLine("Available models: grok-2-latest, grok-3-latest, grok-4-latest");
+        Console.WriteLine("Available models: grok-3-latest, grok-4-latest");
         Console.WriteLine("Type 'quit' to exit, 'm' to switch models");
         Console.WriteLine();
 
@@ -223,9 +233,8 @@ internal class Program
             {
                 currentModel = currentModel switch
                 {
-                    "grok-2-latest" => "grok-3-latest",
                     "grok-3-latest" => "grok-4-latest",
-                    "grok-4-latest" => "grok-2-latest",
+                    "grok-4-latest" => "grok-3-latest",
                     _ => "grok-3-latest"
                 };
                 Console.WriteLine($"Switched to model: {currentModel}");
@@ -372,7 +381,7 @@ thread.ClearMessages();
 var visionThread = new GrokThread(client);
 await foreach (var message in visionThread.AskQuestion(
     "Describe this image in detail", 
-    model: "grok-2-vision-latest"))
+    model: "grok-2-vision-1212"))
 {
     // Handle vision model response
 }
