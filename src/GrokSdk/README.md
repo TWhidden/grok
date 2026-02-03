@@ -218,11 +218,11 @@ The `GrokToolImageGeneration` tool allows Grok to generate images based on a tex
 ```csharp
 var thread = new GrokThread(client);
 thread.RegisterTool(new GrokToolImageGeneration(client));
-thread.AddSystemInstruction("You can generate images using the 'generate_image' tool.");
+thread.AddSystemInstruction("You have the ability to generate images from text descriptions.");
 
 await foreach (var message in thread.AskQuestion("Generate an image of a sunset"))
 {
-    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == "generate_image")
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == GrokToolImageGeneration.ToolName)
     {
         Console.WriteLine($"Image URL: {toolResponse.ToolResponse}");
     }
@@ -230,17 +230,17 @@ await foreach (var message in thread.AskQuestion("Generate an image of a sunset"
 ```
 
 ### Reasoning Tool
-The `GrokReasoningTool` enables Grok to perform complex reasoning on a given problem, with configurable effort levels ("low" or "high").
+The `GrokToolReasoning` enables Grok to perform complex reasoning on a given problem, with configurable effort levels ("low" or "high").
 
 #### Usage Example
 ```csharp
 var thread = new GrokThread(client);
-thread.RegisterTool(new GrokReasoningTool(client));
-thread.AddSystemInstruction("You can perform reasoning using the 'reason' tool.");
+thread.RegisterTool(new GrokToolReasoning(client));
+thread.AddSystemInstruction("You have access to advanced reasoning capabilities for complex problems.");
 
 await foreach (var message in thread.AskQuestion("Explain why the sky is blue with high effort"))
 {
-    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == "reason")
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == GrokToolReasoning.ToolName)
     {
         Console.WriteLine($"Reasoning: {toolResponse.ToolResponse}");
     }
@@ -255,14 +255,14 @@ To use this tool, register it with your `GrokThread` instance:
 ```csharp  
 var thread = new GrokThread(client);  
 thread.RegisterTool(new GrokToolLiveSearch(client));  
-thread.AddSystemInstruction("You can perform live searches using the 'live_search' tool.");  
+thread.AddSystemInstruction("You can search the web, news, X, and RSS feeds in real-time.");  
 ```
 
 **Usage Example:**  
 ```csharp  
 await foreach (var message in thread.AskQuestion("What's the latest news about AI?"))  
 {  
-    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == "live_search")  
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == GrokToolLiveSearch.ToolName)  
     {  
         Console.WriteLine($"Search Summary: {toolResponse.ToolResponse}");  
     }  
@@ -284,14 +284,14 @@ To use this tool, register it with your `GrokThread` instance:
 ```csharp  
 var thread = new GrokThread(client);  
 thread.RegisterTool(new GrokToolImageUnderstanding(client));  
-thread.AddSystemInstruction("You can analyze images using the 'image_understanding' tool.");  
+thread.AddSystemInstruction("You can analyze images and answer questions about their content.");  
 ```
 
 **Usage Example:**  
 ```csharp  
 await foreach (var message in thread.AskQuestion("What's in this image? https://example.com/image.jpg"))  
 {  
-    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == "image_understanding")  
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == GrokToolImageUnderstanding.ToolName)  
     {  
         Console.WriteLine($"Image Description: {toolResponse.ToolResponse}");  
     }  
