@@ -6,14 +6,15 @@
 [![.NET 8.0](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/)
 [![.NET Standard 2.0](https://img.shields.io/badge/.NET%20Standard-2.0-blue.svg)](https://dotnet.microsoft.com/en-us/platform/dotnet-standard)
 
-An unofficial .NET library for interacting with xAI's Grok API, featuring comprehensive support for **Grok 2**, **Grok 3**, **Grok 4**, and **Grok Vision** models, plus all Grok API functions including **Live Search**, **Image Understanding**, **Image Generation**, and **Reasoning**. The library provides a powerful conversation management system with built-in tool integration, real-time streaming, and an extensible architecture for .NET applications.
+An unofficial .NET library for interacting with xAI's Grok API, featuring comprehensive support for **Grok 2**, **Grok 3**, **Grok 4**, and **Grok Vision** models, plus all Grok API functions including **Web Search**, **X Search**, **Image Understanding**, **Image Generation**, and **Reasoning**. The library includes full support for the new **xAI Responses API** (`/v1/responses`). The library provides a powerful conversation management system with built-in tool integration, real-time streaming, and an extensible architecture for .NET applications.
 
 If you find this tool helpful or use it in your projects, please drop me a note on [X](https://x.com/twhidden) to let me know—it encourages me to keep it going!
 
 ## 🎯 Key Features
 
 - **Complete Model Support**: Full compatibility with Grok 2, 3, 4, and Vision models
-- **All Grok Functions**: Live Search, Image Understanding, Image Generation, and Reasoning
+- **All Grok Functions**: Web Search, X Search, Image Understanding, Image Generation, and Reasoning
+- **Responses API**: Full support for xAI's Responses API with built-in agentic tools
 - **Built-in Tools**: Pre-implemented tools for all Grok API capabilities
 - **Streaming Conversations**: Real-time response streaming with state management
 - **Tool Integration**: Extensible architecture for custom tool development
@@ -53,7 +54,7 @@ var thread = new GrokThread(client);
 // Register built-in tools
 thread.RegisterTool(new GrokToolImageGeneration(client));
 thread.RegisterTool(new GrokToolReasoning(client));
-thread.RegisterTool(new GrokToolLiveSearch(client));
+thread.RegisterTool(new GrokToolWebSearch(client));
 thread.RegisterTool(new GrokToolImageUnderstanding(client));
 
 // Set system instructions
@@ -138,29 +139,31 @@ await foreach (var message in thread.AskQuestion("Analyze the pros and cons of r
 - `problem`: The problem or question to reason about
 - `effort`: Reasoning effort level - "low" or "high" (default: "low")
 
-### 🔍 Live Search Function
+### 🔍 Web Search Function (Responses API)
 
-Utilize Grok's real-time search across web, news, X (Twitter), and RSS feeds.
+Search the web and X/Twitter in real-time using xAI's Responses API (`/v1/responses`). This replaces the deprecated Live Search function.
 
 ```csharp
 var thread = new GrokThread(client);
-thread.RegisterTool(new GrokToolLiveSearch(client));
+thread.RegisterTool(new GrokToolWebSearch(client));
 
 await foreach (var message in thread.AskQuestion("What's the latest news about AI developments?"))
 {
-    if (message is GrokToolResponse response && response.ToolName == GrokToolLiveSearch.ToolName)
+    if (message is GrokToolResponse response && response.ToolName == GrokToolWebSearch.ToolName)
     {
         Console.WriteLine($"Search results: {response.ToolResponse}");
     }
 }
 ```
 
-**Grok API Parameters:**
-- `query`: Search query string
-- `search_type`: Type of search - "web", "news", "x", or "rss"
-- `max_results`: Maximum number of results (optional)
-- `from_date`, `to_date`: Date range filters (optional)
-- `country`: Country code for localized results (optional)
+**Parameters:**
+- `query`: Search query string (required)
+- `search_type`: Type of search - `"web"`, `"x"`, or `"both"` (default: `"web"`)
+- `allowed_domains`: For web search - only search within these domains (max 5)
+- `excluded_domains`: For web search - exclude these domains (max 5)
+- `allowed_x_handles`: For X search - only search posts from these handles (max 10)
+- `excluded_x_handles`: For X search - exclude posts from these handles (max 10)
+- `from_date`, `to_date`: For X search - date range in ISO8601 format (YYYY-MM-DD)
 
 ### 👁️ Image Understanding Function
 
@@ -207,11 +210,11 @@ internal class Program
         // Register all built-in tools
         thread.RegisterTool(new GrokToolImageGeneration(client));
         thread.RegisterTool(new GrokToolReasoning(client));
-        thread.RegisterTool(new GrokToolLiveSearch(client, currentModel));
+        thread.RegisterTool(new GrokToolWebSearch(client));
         thread.RegisterTool(new GrokToolImageUnderstanding(client));
 
         // Set system instructions
-        thread.AddSystemInstruction("You are a helpful AI assistant with access to image generation, reasoning, search, and image understanding tools.");
+        thread.AddSystemInstruction("You are a helpful AI assistant with access to image generation, reasoning, web search, and image understanding tools.");
 
         Console.WriteLine("🚀 Grok Chat Console");
         Console.WriteLine("Available models: grok-3-latest, grok-4-latest");
