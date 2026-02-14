@@ -15,6 +15,9 @@ public class GrokToolReasoningArgs
 
     /// <summary>
     ///     The effort level for reasoning, either "low" or "high". Defaults to "low".
+    ///     <para><b>Note:</b> This parameter is only supported by legacy models (grok-3-mini, grok-3-mini-fast).
+    ///     Grok 4+ models have built-in reasoning and do not support this parameter.</para>
+    ///     <para>See: <see href="https://docs.x.ai/docs/models">xAI Models Documentation</see></para>
     /// </summary>
     [JsonProperty("effort")]
     public string Effort { get; set; } = "low";
@@ -73,9 +76,9 @@ public class GrokToolReasoning : IGrokTool
     ///     Initializes a new instance of <see cref="GrokToolReasoning" /> with a Grok client and an optional model.
     /// </summary>
     /// <param name="client">The <see cref="GrokClient" /> instance used to make API calls.</param>
-    /// <param name="grokModel">The Grok model to use for reasoning. Defaults to "grok-3-mini".</param>
+    /// <param name="grokModel">The Grok model to use for reasoning. Defaults to "grok-4-1-fast-reasoning".</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="client" /> is null.</exception>
-    public GrokToolReasoning(GrokClient client, string grokModel = "grok-3-mini")
+    public GrokToolReasoning(GrokClient client, string grokModel = "grok-4-1-fast-reasoning")
     {
         _client = client ?? throw new ArgumentNullException(nameof(client));
         _grokModel = grokModel;
@@ -144,23 +147,14 @@ public class GrokToolReasoning : IGrokTool
     /// </summary>
     /// <param name="args">The arguments for the reasoning operation.</param>
     /// <returns>A task resolving to the reasoning response.</returns>
+    /// <remarks>
+    /// The <c>effort</c> parameter is only applied for legacy models (grok-3-mini, grok-3-mini-fast).
+    /// Grok 4+ models have built-in reasoning and ignore the effort parameter.
+    /// </remarks>
     public async Task<GrokToolReasoningResponse> ExecuteTypedAsync(GrokToolReasoningArgs args)
     {
         if (string.IsNullOrEmpty(args.Problem))
             return new GrokToolReasoningResponse { Error = "Problem cannot be empty." };
-
-        GrokChatCompletionRequestReasoning_effort effort;
-        switch (args.Effort.ToLower())
-        {
-            case "low":
-                effort = GrokChatCompletionRequestReasoning_effort.Low;
-                break;
-            case "high":
-                effort = GrokChatCompletionRequestReasoning_effort.High;
-                break;
-            default:
-                return new GrokToolReasoningResponse { Error = "Invalid effort level. Must be 'low' or 'high'." };
-        }
 
         var request = new GrokChatCompletionRequest
         {
@@ -171,9 +165,27 @@ public class GrokToolReasoning : IGrokTool
                     Content = new List<GrokContent> { new GrokTextPart { Text = args.Problem } }
                 }
             },
-            Model = _grokModel,
-            Reasoning_effort = effort
+            Model = _grokModel
         };
+
+        // Only set reasoning_effort for legacy models that support it
+        // Grok 4+ models have built-in reasoning and will error if this parameter is set
+        if (IsLegacyReasoningModel(_grokModel))
+        {
+            GrokChatCompletionRequestReasoning_effort effort;
+            switch (args.Effort.ToLower())
+            {
+                case "low":
+                    effort = GrokChatCompletionRequestReasoning_effort.Low;
+                    break;
+                case "high":
+                    effort = GrokChatCompletionRequestReasoning_effort.High;
+                    break;
+                default:
+                    return new GrokToolReasoningResponse { Error = "Invalid effort level. Must be 'low' or 'high'." };
+            }
+            request.Reasoning_effort = effort;
+        }
 
         try
         {
@@ -185,5 +197,14 @@ public class GrokToolReasoning : IGrokTool
         {
             return new GrokToolReasoningResponse { Error = $"Reasoning failed: {ex.Message}" };
         }
+    }
+
+    /// <summary>
+    /// Determines if the model is a legacy model that supports the reasoning_effort parameter.
+    /// </summary>
+    private static bool IsLegacyReasoningModel(string model)
+    {
+        var legacyModels = new[] { "grok-3-mini", "grok-3-mini-fast", "grok-3-mini-latest" };
+        return legacyModels.Any(m => model.StartsWith(m, StringComparison.OrdinalIgnoreCase));
     }
 }

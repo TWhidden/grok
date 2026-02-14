@@ -2,13 +2,64 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata>
 		<id>GrokSdk</id>
-		<version>1.3.1</version>
+		<version>1.4.0</version>
 		<authors>Travis Whidden</authors>
 		<description>xAI Grok dotnet integration</description>
 		<tags>xAI Grok dotnet</tags>
 		<license type="expression">MIT</license>
 		<repository type="git" url="https://github.com/TWhidden/grok.git" />
 		<readme>README.md</readme>
+		<icon>xai.png</icon>
+		<releaseNotes>
+## v1.4.0 (February 2026)
+
+### Breaking Changes
+- **Removed `GrokToolLiveSearch`**: The deprecated `search_parameters` API returned HTTP 410 (Gone). This class has been completely removed.
+- **Removed deprecated schemas**: `GrokSearchParameters`, `GrokSearchParametersMode`, `GrokSource`, `GrokWebSource`, `GrokXSource`, `GrokNewsSource`, `GrokRssSource` have all been removed from the generated client.
+- **Removed `live_search` from `GrokToolType`**: The `GrokToolType` enum now only contains `Function`.
+- **Removed `search_parameters` from `GrokChatCompletionRequest`**: No longer supported by the xAI API.
+
+### Added - Responses API Support
+- **New xAI Responses API** (`/v1/responses`): Full support for the new Responses API with `CreateResponseAsync`, `GetResponseAsync`, `DeleteResponseAsync` methods.
+- **New `GrokToolWebSearch`**: Replacement tool for web and X/Twitter search using the Responses API. Supports `web_search`, `x_search`, or both.
+  - Configurable search filters: `allowed_domains`, `excluded_domains`, `allowed_x_handles`, `excluded_x_handles`, `from_date`, `to_date`
+  - Image and video understanding support
+  - Citation annotations in search results
+- **New generated types**: `GrokResponseRequest`, `GrokResponseInputMessage`, `GrokResponseTool`, `GrokResponseToolType` (web_search, x_search, code_interpreter, function), `GrokResponseResponse`, `GrokResponseOutputItem`, `GrokResponseOutputContent`, `GrokResponseAnnotation`, `GrokResponseUsage`, and more.
+- **Function tools in Responses API**: Support for `name`, `description`, `parameters`, `strict` fields directly on `GrokResponseTool`.
+
+### Migration Guide
+Replace `GrokToolLiveSearch` with `GrokToolWebSearch`:
+```csharp
+// Before (removed):
+thread.RegisterTool(new GrokToolLiveSearch(client));
+
+// After:
+thread.RegisterTool(new GrokToolWebSearch(client));
+```
+
+## v1.3.1 (February 2026)
+
+### Breaking Changes - Model Deprecations
+Updated to comply with xAI's deprecation notice (effective February 28, 2026):
+
+- **Image Generation**: `grok-2-image-1212` → `grok-imagine-image`
+  - New model delivers significantly superior image quality
+- **Reasoning**: `grok-3-mini` → `grok-4-1-fast-reasoning`
+  - GrokToolReasoning now defaults to the new reasoning model
+- **Vision/Image Understanding**: `grok-2-vision-1212` → `grok-4-1-fast-reasoning`
+  - Grok 4.1 Fast models now support multimodal (text + image) inputs
+
+### Model Compatibility Notes
+- **`reasoning_effort` parameter**: Only supported by legacy models (grok-3-mini).
+  - Grok 4+ models have built-in reasoning and will error if this parameter is set
+  - GrokToolReasoning now conditionally applies reasoning_effort only for models that support it
+
+### Updates
+- Updated all test files to use new model names
+- Updated README documentation with new model table and deprecation notice
+- Added NuGet package icon
+		</releaseNotes>
 		<dependencies>
 			<group targetFramework="net8.0">
 				<dependency id="Newtonsoft.Json" version="13.0.3" />
@@ -24,5 +75,6 @@
 		<file src="bin/Release/net8.0/GrokSdk.dll" target="lib/net8.0" />
 		<file src="bin/Release/netstandard2.0/GrokSdk.dll" target="lib/netstandard2.0" />
 		<file src="README.md" target="" />
+		<file src="xai.png" target="" />
 	</files>
 </package>

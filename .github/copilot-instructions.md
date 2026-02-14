@@ -152,6 +152,42 @@ public class CustomTool : IGrokTool
 - API keys loaded from files (`apikey.txt`) or environment variables
 - Use `DataTestMethod` with multiple model versions for compatibility testing
 
+## Testing Requirements
+
+**CRITICAL**: All API changes MUST have passing tests before work is considered complete.
+
+### When to Write/Update Tests
+- **New API features**: Create tests that validate the new functionality works with the live API
+- **API changes**: Update existing tests and add new ones to cover changed behavior
+- **Bug fixes**: Add regression tests that would have caught the bug
+
+### Test Execution Checklist
+Before marking any API-related work as complete:
+
+1. **Build the solution**: `dotnet build` must succeed with no errors
+2. **Run affected tests**: Execute tests related to your changes
+3. **Run full test suite**: `dotnet test` to ensure no regressions
+4. **Verify Live tests**: Tests marked `[TestCategory("Live")]` must pass against the actual xAI API
+
+### Test File Conventions
+- Test files follow pattern: `Grok{Feature}Tests.cs`
+- Inherit from `GrokClientTestBaseClass` for API key handling and rate limiting
+- Use `WaitForRateLimitAsync()` between API calls to prevent rate limiting
+- Wrap API calls in try-catch with `Assert.Fail` for meaningful error messages:
+  ```csharp
+  try
+  {
+      response = await client.CreateChatCompletionAsync(request);
+  }
+  catch (GrokSdkException ex)
+  {
+      Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+  }
+  ```
+
+### Test Categories
+- `[TestCategory("Live")]`: Requires live API access (uses real API key)
+
 ## Integration Points
 
 - **Newtonsoft.Json**: Primary serialization for all API communication
@@ -166,3 +202,23 @@ public class CustomTool : IGrokTool
 - `Tools/IGrokTool.cs`: Tool contract definition
 - `GenerateClient.ps1`: Client regeneration script
 - `GrokSdk.nuspec`: Custom NuGet packaging configuration
+
+## Versioning & Release Notes
+
+**IMPORTANT**: When adding, changing, or removing features, the following must be updated:
+
+1. **Version Number**: Update `<version>` in both:
+   - `GrokSdk.nuspec`
+   - `GrokSdk.csproj`
+
+2. **Release Notes**: Update the `<releaseNotes>` section in `GrokSdk.nuspec` with:
+   - Breaking changes (model deprecations, API changes)
+   - New features added
+   - Bug fixes
+   - Updated dependencies
+
+3. **CHANGELOG.md**: Add a new version entry following the Keep a Changelog format
+
+4. **README.md**: Update documentation to reflect any user-facing changes
+
+This ensures the NuGet package metadata stays in sync with the codebase.

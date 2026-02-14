@@ -19,7 +19,7 @@ internal class Program
         // Register some pre-made tools
         thread.RegisterTool(new GrokToolImageGeneration(sdk));
         thread.RegisterTool(new GrokToolReasoning(sdk));
-        thread.RegisterTool(new GrokToolLiveSearch(sdk, currentModel));
+        thread.RegisterTool(new GrokToolWebSearch(sdk, currentModel));
         thread.RegisterTool(new GrokToolImageUnderstanding(sdk));
 
         // Welcome message with instructions

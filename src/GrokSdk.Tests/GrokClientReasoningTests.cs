@@ -12,8 +12,9 @@ public class GrokClientReasoningTests : GrokClientTestBaseClass
     }
 
     [TestMethod]
-    [DataRow("grok-3-mini")] // Reasoning-capable model
+    [DataRow("grok-3-mini")] // Legacy reasoning model - only model that supports reasoning_effort
     [TestCategory("Live")]
+    [TestCategory("Deprecated")] // This test uses deprecated functionality
     public async Task CreateChatCompletionAsync_LiveReasoningEffort_ComparesLowAndHigh(string model)
     {
         using var httpClient = new HttpClient();

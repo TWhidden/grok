@@ -10,7 +10,7 @@ public class GrokClientImageGenerationTests : GrokClientTestBaseClass
     }
 
     [TestMethod]
-    [DataRow("grok-2-image-1212")]
+    [DataRow("grok-imagine-image")]
     [TestCategory("Live")]
     public async Task GenerateImagesAsync_LiveSimplePrompt_ReturnsValidImageUrl(string model)
     {
@@ -51,7 +51,7 @@ public class GrokClientImageGenerationTests : GrokClientTestBaseClass
     }
 
     [TestMethod]
-    [DataRow("grok-2-image-1212")]
+    [DataRow("grok-imagine-image")]
     [TestCategory("Live")]
     public async Task GenerateImagesAsync_LiveSimplePrompt_ReturnsValidBase64NoUrl(string model)
     {

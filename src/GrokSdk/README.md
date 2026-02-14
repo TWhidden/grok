@@ -247,32 +247,91 @@ await foreach (var message in thread.AskQuestion("Explain why the sky is blue wi
 }
 ```
 
-### Live Search Tool
-The `GrokToolLiveSearch` tool enables Grok to perform real-time searches on various sources, including web, news, X, and RSS feeds. It returns a summary and citations based on the search query and parameters.
+### Web Search Tool (Responses API)
+The `GrokToolWebSearch` tool enables Grok to perform real-time web and X/Twitter searches using xAI's Responses API (`/v1/responses`). It replaces the deprecated `GrokToolLiveSearch`.
 
-To use this tool, register it with your `GrokThread` instance:
+#### Usage Example
+```csharp
+var thread = new GrokThread(client);
+thread.RegisterTool(new GrokToolWebSearch(client));
+thread.AddSystemInstruction("You can search the web and X/Twitter for real-time information.");
 
-```csharp  
-var thread = new GrokThread(client);  
-thread.RegisterTool(new GrokToolLiveSearch(client));  
-thread.AddSystemInstruction("You can search the web, news, X, and RSS feeds in real-time.");  
+await foreach (var message in thread.AskQuestion("What's the latest news about AI?"))
+{
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == GrokToolWebSearch.ToolName)
+    {
+        Console.WriteLine($"Search Results: {toolResponse.ToolResponse}");
+    }
+}
 ```
 
-**Usage Example:**  
-```csharp  
-await foreach (var message in thread.AskQuestion("What's the latest news about AI?"))  
-{  
-    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == GrokToolLiveSearch.ToolName)  
-    {  
-        Console.WriteLine($"Search Summary: {toolResponse.ToolResponse}");  
-    }  
-}  
+**Parameters:**
+- `query`: The search query (required).
+- `search_type`: Type of search - `"web"`, `"x"`, or `"both"` (default: `"web"`).
+- `allowed_domains`: For web search - only search within these domains (max 5).
+- `excluded_domains`: For web search - exclude these domains (max 5).
+- `allowed_x_handles`: For X search - only search posts from these handles (max 10).
+- `excluded_x_handles`: For X search - exclude posts from these handles (max 10).
+- `from_date`: For X search - start date in ISO8601 format (YYYY-MM-DD).
+- `to_date`: For X search - end date in ISO8601 format (YYYY-MM-DD).
+
+## Responses API (Direct Usage)
+
+The xAI Responses API (`/v1/responses`) provides server-side tool execution for web search, X search, code interpreter, and function calling. You can use it directly without `GrokThread`:
+
+```csharp
+using GrokSdk;
+
+var httpClient = new HttpClient();
+var client = new GrokClient(httpClient, "your-api-key-here");
+
+// Web search with the Responses API
+var request = new GrokResponseRequest
+{
+    Input = new Collection<GrokResponseInputMessage>
+    {
+        new GrokResponseInputMessage 
+        { 
+            Role = GrokResponseInputMessageRole.User, 
+            Content = "What's happening in AI today?" 
+        }
+    },
+    Model = "grok-4-fast",
+    Tools = new Collection<GrokResponseTool>
+    {
+        new GrokResponseTool { Type = GrokResponseToolType.Web_search }
+    }
+};
+
+var response = await client.CreateResponseAsync(request);
+
+// Extract text and citations from the response
+foreach (var item in response.Output)
+{
+    if (item.Type == GrokResponseOutputItemType.Message && item.Content != null)
+    {
+        foreach (var content in item.Content)
+        {
+            Console.WriteLine(content.Text);
+            if (content.Annotations != null)
+            {
+                foreach (var annotation in content.Annotations)
+                {
+                    Console.WriteLine($"  Citation: {annotation.Url}");
+                }
+            }
+        }
+    }
+}
 ```
 
-**Parameters:**  
-- `query`: The search query (required).  
-- `search_type`: The type of search ("web", "news", "x", "rss") (required).  
-- Optional parameters: `from_date`, `to_date`, `max_results`, `country`, etc. Refer to the tool's documentation for a full list.
+### Supported Responses API Tools
+| Tool Type | Description |
+|-----------|-------------|
+| `web_search` | Search the web with optional domain filtering |
+| `x_search` | Search X/Twitter posts with handle and date filtering |
+| `code_interpreter` | Execute code on xAI servers |
+| `function` | Custom function calling (same concept as chat completions) |
 
 ---
 

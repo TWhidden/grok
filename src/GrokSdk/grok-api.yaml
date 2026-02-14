@@ -68,6 +68,83 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GrokErrorResponse'
+  /responses:
+    post:
+      summary: Create a new response using the Responses API
+      description: |
+        Generates a response based on text or image prompts using the Responses API.
+        This endpoint supports built-in agentic tools (web_search, x_search, code_interpreter)
+        as well as function calling. The response ID can be used to retrieve the response later
+        or to continue the conversation without repeating prior context.
+      operationId: createResponse
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrokResponseRequest'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokResponseResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokErrorResponse'
+  /responses/{response_id}:
+    get:
+      summary: Retrieve a previous response
+      description: Retrieve a previously generated response by its ID.
+      operationId: getResponse
+      parameters:
+        - name: response_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The response ID returned by a previous create response request.
+      responses:
+        '200':
+          description: Successful response retrieval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokResponseResponse'
+        '404':
+          description: Response not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokErrorResponse'
+    delete:
+      summary: Delete a previous response
+      description: Delete a previously generated response by its ID.
+      operationId: deleteResponse
+      parameters:
+        - name: response_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The response ID returned by a previous create response request.
+      responses:
+        '200':
+          description: Successful response deletion
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokResponseDeleteResponse'
+        '404':
+          description: Response not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokErrorResponse'
 components:
   schemas:
     GrokChatCompletionRequest:
@@ -97,7 +174,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/GrokTool'
-          description: List of tools (functions) available to the model
+          description: List of tools (functions, web_search, x_search) available to the model
         tool_choice:
           oneOf:
             - type: string
@@ -131,11 +208,6 @@ components:
           nullable: true
           default: null
           description: Controls how much time the model spends thinking before responding. Only applicable for reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast). 'low' for quick responses, 'high' for complex reasoning.
-        search_parameters:
-          $ref: '#/components/schemas/GrokSearchParameters'
-          description: Parameters for live search functionality. Optional and defaults to null if not provided.
-          nullable: true
-          default: null
       required:
         - messages
         - model
@@ -311,14 +383,24 @@ components:
 
     GrokTool:
       type: object
-      properties:
-        type:
-          type: string
-          enum: ["function"]
-        function:
-          $ref: '#/components/schemas/GrokFunctionDefinition'
+      description: |
+        A tool definition for the Chat Completions API.
+        Function tools: { "type": "function", "function": { "name": "...", "parameters": {...} } }
+        Note: For web_search, x_search, and code_interpreter tools, use the Responses API (/v1/responses).
       required:
         - type
+      properties:
+        type:
+          $ref: '#/components/schemas/GrokToolType'
+          description: The type of tool. Currently only 'function' is supported for Chat Completions.
+        function:
+          $ref: '#/components/schemas/GrokFunctionDefinition'
+          description: Function tool definition. Required when type is 'function'.
+
+    GrokToolType:
+      type: string
+      description: The type of tool for the Chat Completions API.
+      enum:
         - function
 
     GrokFunctionDefinition:
@@ -507,125 +589,400 @@ components:
       required:
         - revised_prompt
 
-    GrokSearchParameters:
+    # =============================================
+    # Responses API Schemas
+    # =============================================
+
+    GrokResponseRequest:
       type: object
+      description: Request body for the Responses API (/v1/responses).
       properties:
-        mode:
+        input:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrokResponseInputMessage'
+          description: The input messages passed to the model. Each message has a role and string content.
+        model:
           type: string
-          enum:
-            - auto
-            - on
-            - off
-          default: auto
-          description: Controls the search mode. 'auto' lets the model decide, 'on' forces search, 'off' disables search.
-        return_citations:
+          description: The Grok model to use (e.g., grok-4-0709, grok-4-fast).
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrokResponseTool'
+          description: A list of tools the model may call. Supports web_search, x_search, code_interpreter, and function tools.
+        tool_choice:
+          oneOf:
+            - type: string
+              enum: ["auto", "required", "none"]
+            - type: object
+              properties:
+                type:
+                  type: string
+                  enum: ["function"]
+                function:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+              required:
+                - type
+                - function
+            - type: 'null'
+          default: null
+          description: Controls tool usage. 'auto' (default when tools present), 'required', 'none', or specify a function.
+        stream:
           type: boolean
+          description: Whether to stream the response as Server-Sent Events.
+          default: false
+        temperature:
+          type: number
+          format: float
+          description: Controls randomness (0 = deterministic, higher = more creative).
+          minimum: 0
+          maximum: 2
+        store:
+          type: boolean
+          description: Whether to store the response for later retrieval (default true).
           default: true
-          description: Whether to return citations in the response.
+        parallel_tool_calls:
+          type: boolean
+          description: Whether to allow the model to run parallel tool calls.
+          default: true
+        max_output_tokens:
+          type: integer
+          description: Maximum number of output tokens to generate.
+          nullable: true
+        previous_response_id:
+          type: string
+          description: ID of a previous response to continue the conversation from.
+          nullable: true
+      required:
+        - input
+        - model
+
+    GrokResponseInputMessage:
+      type: object
+      description: An input message for the Responses API. Content is a simple string.
+      properties:
+        role:
+          type: string
+          enum: ["system", "user", "assistant", "tool", "developer"]
+          description: The role of the message sender.
+        content:
+          type: string
+          description: The text content of the message.
+        tool_call_id:
+          type: string
+          description: For tool role messages, the ID of the tool call this result corresponds to.
+      required:
+        - role
+        - content
+
+    GrokResponseTool:
+      type: object
+      description: |
+        A tool definition for the Responses API.
+        Built-in tools: web_search, x_search, code_interpreter (execute on xAI servers).
+        Function tools: custom functions you define that the model can invoke.
+      required:
+        - type
+      properties:
+        type:
+          $ref: '#/components/schemas/GrokResponseToolType'
+          description: The type of tool.
+        name:
+          type: string
+          description: For function tools, the name of the function.
+        description:
+          type: string
+          description: For function tools, the description of the function.
+        parameters:
+          type: object
+          additionalProperties: true
+          description: For function tools, the JSON Schema of function parameters.
+        strict:
+          type: boolean
+          description: For function tools, whether to enforce strict JSON Schema.
+        function:
+          $ref: '#/components/schemas/GrokFunctionDefinition'
+          description: Function definition (alternative format). Required when type is 'function' in chat completions format.
+        allowed_domains:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+          description: For web_search - only search within these domains. Cannot be set with excluded_domains.
+        excluded_domains:
+          type: array
+          items:
+            type: string
+          maxItems: 5
+          description: For web_search - exclude these domains from search. Cannot be set with allowed_domains.
+        enable_image_understanding:
+          type: boolean
+          description: For web_search/x_search - enable analysis of images found during search.
+        allowed_x_handles:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          description: For x_search - only consider posts from these X handles. Cannot be set with excluded_x_handles.
+        excluded_x_handles:
+          type: array
+          items:
+            type: string
+          maxItems: 10
+          description: For x_search - exclude posts from these X handles. Cannot be set with allowed_x_handles.
         from_date:
           type: string
           format: date
-          nullable: true
-          default: null
-          description: Start date for search data in ISO8601 format (YYYY-MM-DD).
+          description: For x_search - start date in ISO8601 format (YYYY-MM-DD).
         to_date:
           type: string
           format: date
-          nullable: true
-          default: null
-          description: End date for search data in ISO8601 format (YYYY-MM-DD).
-        max_search_results:
+          description: For x_search - end date in ISO8601 format (YYYY-MM-DD).
+        enable_video_understanding:
+          type: boolean
+          description: For x_search - enable analysis of videos in posts.
+
+    GrokResponseToolType:
+      type: string
+      description: The type of tool for the Responses API.
+      enum:
+        - web_search
+        - x_search
+        - code_interpreter
+        - function
+
+    GrokResponseResponse:
+      type: object
+      description: Response from the Responses API.
+      properties:
+        id:
+          type: string
+          description: Unique ID of the response.
+        object:
+          type: string
+          description: The object type, always "response".
+        created_at:
           type: integer
-          minimum: 1
-          nullable: true
-          default: null
-          description: Maximum number of search results to consider.
-        sources:
+          description: Unix timestamp of when the response was created.
+        model:
+          type: string
+          description: Model name used to generate the response.
+        output:
           type: array
           items:
-            $ref: '#/components/schemas/GrokSource'
-          description: List of data sources to use for search.
-      description: Optional parameters for LiveSearch. All fields are optional and default to null or their default values.
+            $ref: '#/components/schemas/GrokResponseOutputItem'
+          description: The response generated by the model.
+        status:
+          type: string
+          enum: ["completed", "in_progress", "incomplete"]
+          description: Status of the response.
+        usage:
+          $ref: '#/components/schemas/GrokResponseUsage'
+        tool_choice:
+          type: string
+          description: Tool choice setting used.
+        tools:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrokResponseTool'
+          description: Tools that were available for this response.
+        parallel_tool_calls:
+          type: boolean
+          description: Whether parallel tool calls were allowed.
+        previous_response_id:
+          type: string
+          nullable: true
+          description: ID of the previous response if this is a continuation.
+        store:
+          type: boolean
+          description: Whether the response is stored.
+        text:
+          type: object
+          additionalProperties: true
+          description: Text format settings.
+        temperature:
+          type: number
+          nullable: true
+        top_p:
+          type: number
+          nullable: true
+        reasoning:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Reasoning configuration.
+        incomplete_details:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Details about why the response is incomplete, if applicable.
+        user:
+          type: string
+          nullable: true
+      required:
+        - id
+        - object
+        - model
+        - output
+        - status
 
-    GrokSource:
+    GrokResponseOutputItem:
       type: object
+      description: |
+        An output item from the Responses API.
+        - type "message": contains the assistant's response content with optional citations.
+        - type "reasoning": contains the model's reasoning/thinking process summary.
+        - type "function_call": a function call request from the model.
+        - type "web_search_call": a web search action performed by the model.
+        - type "x_search_call": an X/Twitter search action performed by the model.
+        - type "code_interpreter_call": a code interpreter action performed by the model.
       properties:
         type:
           type: string
-          enum:
-            - web
-            - x
-            - news
-            - rss
-          description: The type of source, used to determine the specific source schema.
+          enum: ["message", "reasoning", "function_call", "web_search_call", "x_search_call", "code_interpreter_call", "custom_tool_call"]
+          description: The type of output item.
+        id:
+          type: string
+          description: Unique identifier for this output item.
+        role:
+          type: string
+          description: For message type, the role (e.g., "assistant").
+        status:
+          type: string
+          enum: ["completed", "in_progress", "incomplete"]
+          description: Status of this output item.
+        content:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrokResponseOutputContent'
+          description: For message type, the content parts of the response.
+        summary:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrokResponseSummaryContent'
+          description: For reasoning type, the summary of the reasoning process.
+        call_id:
+          type: string
+          description: For function_call type, the ID of the tool call.
+        name:
+          type: string
+          description: For function_call type, the function name.
+        arguments:
+          type: string
+          description: For function_call type, the JSON string of function arguments.
+        action:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: For web_search_call/x_search_call/code_interpreter_call types, details about the action performed.
       required:
         - type
-      discriminator:
-        propertyName: type
-        mapping:
-          web: '#/components/schemas/GrokWebSource'
-          x: '#/components/schemas/GrokXSource'
-          news: '#/components/schemas/GrokNewsSource'
-          rss: '#/components/schemas/GrokRssSource'
 
-    GrokWebSource:
-      allOf:
-        - $ref: '#/components/schemas/GrokSource'
-        - type: object
-          properties:
-            country:
-              type: string
-              description: ISO alpha-2 country code.
-            excluded_websites:
-              type: array
-              items:
-                type: string
-              maxItems: 5
-              description: List of websites to exclude.
-            safe_search:
-              type: boolean
-              description: Whether to enable safe search.
+    GrokResponseOutputContent:
+      type: object
+      description: Content part of a response output message.
+      properties:
+        type:
+          type: string
+          description: Content type (e.g., "output_text").
+        text:
+          type: string
+          description: The text content.
+        annotations:
+          type: array
+          items:
+            $ref: '#/components/schemas/GrokResponseAnnotation'
+          description: Inline citation annotations for the text content.
+        logprobs:
+          type: object
+          nullable: true
+          additionalProperties: true
+      required:
+        - type
 
-    GrokXSource:
-      allOf:
-        - $ref: '#/components/schemas/GrokSource'
-        - type: object
-          properties:
-            x_handles:
-              type: array
-              items:
-                type: string
-              description: List of X handles to consider.
+    GrokResponseAnnotation:
+      type: object
+      description: An inline citation annotation in the response text.
+      properties:
+        type:
+          type: string
+          description: Annotation type (e.g., "url_citation").
+        url:
+          type: string
+          description: The source URL of the citation.
+        start_index:
+          type: integer
+          description: Character position where the citation starts in the response text.
+        end_index:
+          type: integer
+          description: Character position where the citation ends (exclusive).
+        title:
+          type: string
+          description: The citation display number (e.g., "1", "2").
+      required:
+        - type
 
-    GrokNewsSource:
-      allOf:
-        - $ref: '#/components/schemas/GrokSource'
-        - type: object
-          properties:
-            country:
-              type: string
-              description: ISO alpha-2 country code.
-            excluded_websites:
-              type: array
-              items:
-                type: string
-              maxItems: 5
-              description: List of websites to exclude.
-            safe_search:
-              type: boolean
-              description: Whether to enable safe search.
+    GrokResponseSummaryContent:
+      type: object
+      description: Summary content from the reasoning output.
+      properties:
+        type:
+          type: string
+          description: Summary type (e.g., "summary_text").
+        text:
+          type: string
+          description: The summary text content.
+      required:
+        - type
 
-    GrokRssSource:
-      allOf:
-        - $ref: '#/components/schemas/GrokSource'
-        - type: object
-          properties:
-            links:
-              type: array
-              items:
-                type: string
-              maxItems: 1
-              description: List of RSS feed URLs (currently limited to one).
+    GrokResponseUsage:
+      type: object
+      description: Usage information for a Responses API call. Uses input_tokens/output_tokens instead of prompt_tokens/completion_tokens.
+      properties:
+        input_tokens:
+          type: integer
+          description: Number of input tokens used.
+        input_tokens_details:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Details about input token usage (e.g., cached_tokens).
+        output_tokens:
+          type: integer
+          description: Number of output tokens generated.
+        output_tokens_details:
+          type: object
+          nullable: true
+          additionalProperties: true
+          description: Details about output token usage (e.g., reasoning_tokens).
+        total_tokens:
+          type: integer
+          description: Total number of tokens used.
+      required:
+        - input_tokens
+        - output_tokens
+        - total_tokens
+
+    GrokResponseDeleteResponse:
+      type: object
+      description: Response from deleting a previous response.
+      properties:
+        id:
+          type: string
+          description: The response ID that was deleted.
+        object:
+          type: string
+          description: Always "response".
+        deleted:
+          type: boolean
+          description: Whether the response was successfully deleted.
+      required:
+        - id
+        - object
+        - deleted
 
   securitySchemes:
     ApiKeyAuth:

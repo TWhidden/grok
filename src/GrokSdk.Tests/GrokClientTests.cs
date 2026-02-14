@@ -16,7 +16,6 @@ public class GrokClientTests : GrokClientTestBaseClass
     [DataTestMethod]
     [DataRow("grok-3")]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-3-mini")]
     [DataRow("grok-4-0709")]
     [DataRow("grok-4-latest")]
     [DataRow("grok-4-fast")]
@@ -66,7 +65,6 @@ public class GrokClientTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [DataRow("grok-4-fast")]
     [TestCategory("Live")]
@@ -126,7 +124,6 @@ public class GrokClientTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [DataRow("grok-4-fast")]
     [TestCategory("Live")]
@@ -253,7 +250,6 @@ public class GrokClientTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [DataRow("grok-4-fast")]
     [TestCategory("Live")]
@@ -341,7 +337,7 @@ public class GrokClientTests : GrokClientTestBaseClass
                 new GrokSystemMessage { Content = "You are Grok, a helpful assistant capable of analyzing images." },
                 new GrokUserMessage { Content = [new GrokTextPart { Text = contentJson }] }
             },
-            Model = "grok-2-vision-1212", // Model that supports image analysis
+            Model = "grok-4-1-fast-reasoning", // Model that supports image analysis (multimodal)
             Stream = false,
             Temperature = 0f
         };
@@ -379,7 +375,6 @@ public class GrokClientTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [DataRow("grok-4-fast")]
     [TestCategory("Live")]
@@ -473,7 +468,6 @@ public class GrokClientTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [DataRow("grok-4-fast")]
     [TestCategory("Live")]
@@ -587,7 +581,6 @@ public class GrokClientTests : GrokClientTestBaseClass
 
     [DataTestMethod]
     [DataRow("grok-3-latest")]
-    [DataRow("grok-3-mini")]
     [DataRow("grok-4-latest")]
     [DataRow("grok-4-fast")]
     [TestCategory("Live")]

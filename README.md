@@ -75,20 +75,20 @@ GrokSdk supports all current xAI Grok models:
 
 | Model | Description | Best For |
 |-------|-------------|----------|
-| `grok-4-1-fast-reasoning` | Grok 4.1 fast with reasoning capabilities | High-speed reasoning tasks |
+| `grok-4-1-fast-reasoning` | Grok 4.1 fast with reasoning & multimodal | High-speed reasoning tasks, image understanding |
 | `grok-4-1-fast-non-reasoning` | Grok 4.1 fast without reasoning | Fast general conversations |
 | `grok-code-fast-1` | Fast code-focused model | Code generation and understanding |
 | `grok-4-fast-reasoning` | Grok 4 fast with reasoning | Balanced reasoning performance |
 | `grok-4-fast-non-reasoning` | Grok 4 fast without reasoning | Fast responses for general use |
 | `grok-4-0709` | Grok 4 version 0709 | Advanced reasoning and understanding |
-| `grok-3-mini` | Mini version of Grok 3 | Lightweight tasks |
 | `grok-3` | Standard Grok 3 model | General conversations and tasks |
-| `grok-2-vision-1212` | Grok 2 with vision capabilities | Image analysis and understanding |
 
 **Note**: "Latest" tagged models (e.g., `grok-3-latest`, `grok-4-latest`) are also supported and tested for compatibility.
 
 ### Image Generation
-- `grok-2-image-1212`: Image generation model
+- `grok-imagine-image`: Image generation model (superior quality)
+
+> ⚠️ **Deprecation Notice** (February 28, 2026): `grok-2-image-1212`, `grok-3-mini`, and `grok-2-vision-1212` are deprecated. Use `grok-imagine-image` for image generation and `grok-4-1-fast-reasoning` for reasoning and image understanding.
 
 ## 🛠️ Complete Grok API Function Support
 
@@ -378,10 +378,11 @@ thread.ClearMessages();
 
 ```csharp
 // Use different models for different tasks
+// Grok 4.1 Fast supports multimodal (text + image) inputs
 var visionThread = new GrokThread(client);
 await foreach (var message in visionThread.AskQuestion(
     "Describe this image in detail", 
-    model: "grok-2-vision-1212"))
+    model: "grok-4-1-fast-reasoning"))
 {
     // Handle vision model response
 }

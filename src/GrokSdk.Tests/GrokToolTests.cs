@@ -177,13 +177,14 @@ public class GrokToolTests : GrokClientTestBaseClass
         Assert.IsNotNull(responseHigh.Reasoning, "Reasoning should not be null.");
         Assert.IsTrue(responseHigh.Reasoning.Length > 0, "Reasoning should not be empty.");
 
-        // Test with invalid effort
+        // Test with invalid effort on a legacy model (only legacy models validate effort)
+        var legacyTool = new GrokToolReasoning(client, "grok-3-mini");
         var argsInvalidEffort = JsonConvert.SerializeObject(new { problem = "Some problem", effort = "medium" });
         await WaitForRateLimitAsync();
         string? resultInvalidEffort = null;
         try
         {
-            resultInvalidEffort = await tool.ExecuteAsync(argsInvalidEffort);
+            resultInvalidEffort = await legacyTool.ExecuteAsync(argsInvalidEffort);
         }
         catch (GrokSdkException ex)
         {
@@ -195,6 +196,25 @@ public class GrokToolTests : GrokClientTestBaseClass
         Assert.IsNotNull(responseInvalidEffort, "responseInvalidEffort was null");
         Assert.IsNotNull(responseInvalidEffort.Error, "Error should not be null for invalid effort.");
         Assert.AreEqual("Invalid effort level. Must be 'low' or 'high'.", responseInvalidEffort.Error);
+
+        // Test with invalid effort on a non-legacy model (effort is ignored, should succeed)
+        var argsInvalidEffortNonLegacy = JsonConvert.SerializeObject(new { problem = "Why is water wet?", effort = "medium" });
+        await WaitForRateLimitAsync();
+        string? resultInvalidEffortNonLegacy = null;
+        try
+        {
+            resultInvalidEffortNonLegacy = await tool.ExecuteAsync(argsInvalidEffortNonLegacy);
+        }
+        catch (GrokSdkException ex)
+        {
+            Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
+        }
+
+        Assert.IsNotNull(resultInvalidEffortNonLegacy, "Response should not be null.");
+        var responseInvalidEffortNonLegacy = JsonConvert.DeserializeObject<GrokToolReasoningResponse>(resultInvalidEffortNonLegacy);
+        Assert.IsNotNull(responseInvalidEffortNonLegacy, "responseInvalidEffortNonLegacy was null");
+        Assert.IsNull(responseInvalidEffortNonLegacy.Error, "Error should be null - non-legacy models ignore invalid effort.");
+        Assert.IsNotNull(responseInvalidEffortNonLegacy.Reasoning, "Reasoning should not be null for non-legacy model.");
 
         // Test with missing problem
         var argsMissingProblem = JsonConvert.SerializeObject(new { effort = "low" });
@@ -219,270 +239,6 @@ public class GrokToolTests : GrokClientTestBaseClass
         await WaitForRateLimitAsync();
     }
 
-
-    [TestMethod]
-    [TestCategory("Live")]
-    public async Task ExecuteAsync_LiveWebSearch_ReturnsSearchResults()
-    {
-        using var httpClient = new HttpClient();
-        var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
-
-        var tool = new GrokToolLiveSearch(client);
-        var args = JsonConvert.SerializeObject(new { query = "latest tech news", search_type = "web" });
-        await WaitForRateLimitAsync();
-        string? result = null;
-        try
-        {
-            result = await tool.ExecuteAsync(args);
-        }
-        catch (GrokSdkException ex)
-        {
-            Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
-        }
-
-        Assert.IsNotNull(result, "Response should not be null.");
-        var response = JsonConvert.DeserializeObject<GrokToolLiveSearchResponse>(result);
-        Assert.IsNotNull(response, "Response was null.");
-        Assert.IsNull(response.Error, "Error should be null for a valid request.");
-        Assert.IsNotNull(response.Summary, "Summary should not be null.");
-        Assert.IsTrue(response.Summary.Length > 0, "Summary should not be empty.");
-        Assert.IsNotNull(response.Citations, "Citations should not be null.");
-    }
-
-    [TestMethod]
-    [TestCategory("Live")]
-    public async Task ExecuteAsync_LiveNewsSearchWithDateRange_ReturnsSearchResults()
-    {
-        using var httpClient = new HttpClient();
-        var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
-
-        var tool = new GrokToolLiveSearch(client);
-        var args = JsonConvert.SerializeObject(new
-        {
-            query = "latest news about the president",
-            search_type = "news",
-            from_date = "2023-01-01",
-            to_date = "2023-12-31"
-        });
-        await WaitForRateLimitAsync();
-        string? result = null;
-        try
-        {
-            result = await tool.ExecuteAsync(args);
-        }
-        catch (GrokSdkException ex)
-        {
-            Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
-        }
-
-        Assert.IsNotNull(result, "Response should not be null.");
-        var response = JsonConvert.DeserializeObject<GrokToolLiveSearchResponse>(result);
-        Assert.IsNotNull(response, "Response was null.");
-        Assert.IsNull(response.Error, "Error should be null for a valid request.");
-        Assert.IsNotNull(response.Summary, "Summary should not be null.");
-        Assert.IsTrue(response.Summary.Length > 0, "Summary should not be empty.");
-    }
-
-    [TestMethod]
-    [TestCategory("Live")]
-    public async Task ExecuteAsync_LiveXSearchWithHandles_ReturnsSearchResults()
-    {
-        using var httpClient = new HttpClient();
-        var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
-
-        var tool = new GrokToolLiveSearch(client);
-        var args = JsonConvert.SerializeObject(new
-        {
-            query = "latest posts",
-            search_type = "x",
-            x_handles = new[] { "elonmusk", "OpenAI" }
-        });
-        await WaitForRateLimitAsync();
-        string? result = null;
-        try
-        {
-            result = await tool.ExecuteAsync(args);
-        }
-        catch (GrokSdkException ex)
-        {
-            Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
-        }
-
-        Assert.IsNotNull(result, "Response should not be null.");
-        var response = JsonConvert.DeserializeObject<GrokToolLiveSearchResponse>(result);
-        Assert.IsNotNull(response, "Response was null.");
-        Assert.IsNull(response.Error, "Error should be null for a valid request.");
-        Assert.IsNotNull(response.Summary, "Summary should not be null.");
-        Assert.IsTrue(response.Summary.Length > 0, "Summary should not be empty.");
-    }
-
-    [TestMethod]
-    [TestCategory("Live")]
-    public async Task ExecuteAsync_LiveRssSearchWithFeedUrl_ReturnsSearchResults()
-    {
-        using var httpClient = new HttpClient();
-        var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
-
-        var tool = new GrokToolLiveSearch(client);
-        var args = JsonConvert.SerializeObject(new
-        {
-            query = "latest space news",
-            search_type = "rss",
-            rss_links = new[] { "https://www.nasa.gov/news-release/feed/" }
-        });
-        await WaitForRateLimitAsync();
-        string? result = null;
-        try
-        {
-            result = await tool.ExecuteAsync(args);
-        }
-        catch (GrokSdkException ex)
-        {
-            Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
-        }
-
-        Assert.IsNotNull(result, "Response should not be null.");
-        var response = JsonConvert.DeserializeObject<GrokToolLiveSearchResponse>(result);
-        Assert.IsNotNull(response, "Response was null.");
-        Assert.IsNull(response.Error, "Error should be null for a valid request.");
-        Assert.IsNotNull(response.Summary, "Summary should not be null.");
-        Assert.IsTrue(response.Summary.Length > 0, "Summary should not be empty.");
-    }
-
-    [TestMethod]
-    [TestCategory("Live")]
-    public async Task ExecuteAsync_InvalidSearchType_ReturnsError()
-    {
-        using var httpClient = new HttpClient();
-        var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
-
-        var tool = new GrokToolLiveSearch(client);
-        var args = JsonConvert.SerializeObject(new { query = "test", search_type = "invalid" });
-        await WaitForRateLimitAsync();
-        string? result = null;
-        try
-        {
-            result = await tool.ExecuteAsync(args);
-        }
-        catch (GrokSdkException ex)
-        {
-            Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
-        }
-
-        Assert.IsNotNull(result, "Response should not be null.");
-        var response = JsonConvert.DeserializeObject<GrokToolLiveSearchResponse>(result);
-        Assert.IsNotNull(response, "Response was null.");
-        Assert.IsNotNull(response.Error, "Error should not be null for an invalid search_type.");
-        Assert.IsTrue(response.Error.Contains("Invalid search_type"),
-            "Error message should indicate invalid search_type.");
-    }
-
-    [TestMethod]
-    [TestCategory("Live")]
-    public async Task ExecuteAsync_MissingQuery_ReturnsError()
-    {
-        using var httpClient = new HttpClient();
-        var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
-
-        var tool = new GrokToolLiveSearch(client);
-        var args = JsonConvert.SerializeObject(new { search_type = "web" });
-        await WaitForRateLimitAsync();
-        string? result = null;
-        try
-        {
-            result = await tool.ExecuteAsync(args);
-        }
-        catch (GrokSdkException ex)
-        {
-            Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
-        }
-
-        Assert.IsNotNull(result, "Response should not be null.");
-        var response = JsonConvert.DeserializeObject<GrokToolLiveSearchResponse>(result);
-        Assert.IsNotNull(response, "Response was null.");
-        Assert.IsNotNull(response.Error, "Error should not be null for a missing query.");
-        Assert.IsTrue(response.Error.Contains("missing query"), "Error message should indicate missing query.");
-    }
-
-    [TestMethod]
-    [TestCategory("Live")]
-    public async Task ExecuteAsync_InvalidDateFormat_ReturnsError()
-    {
-        using var httpClient = new HttpClient();
-        var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
-
-        var tool = new GrokToolLiveSearch(client);
-        var args = JsonConvert.SerializeObject(new
-        {
-            query = "test",
-            search_type = "news",
-            from_date = "invalid-date"
-        });
-        await WaitForRateLimitAsync();
-        string? result = null;
-        try
-        {
-            result = await tool.ExecuteAsync(args);
-        }
-        catch (GrokSdkException ex)
-        {
-            Assert.Fail($"API call failed with status {ex.StatusCode}: {ex.Message}\nResponse: {ex.Response}");
-        }
-
-        Assert.IsNotNull(result, "Response should not be null.");
-        var response = JsonConvert.DeserializeObject<GrokToolLiveSearchResponse>(result);
-        Assert.IsNotNull(response, "Response was null.");
-        Assert.IsNotNull(response.Error, "Error should not be null for an invalid date format.");
-        Assert.IsTrue(response.Error.Contains("from_date must be in YYYY-MM-DD format"),
-            "Error message should indicate invalid date format.");
-    }
-
-    [DataTestMethod]
-    [DataRow("grok-3-latest")]
-    [DataRow("grok-4-latest")]
-    [DataRow("grok-4-fast")]
-    [TestCategory("Live")]
-    public async Task GrokThread_WithLiveSearchTool_PerformsWebSearch(string model)
-    {
-        using var httpClient = new HttpClient();
-        var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
-
-        var thread = new GrokThread(client);
-        thread.RegisterTool(new GrokToolLiveSearch(client, model));
-
-        thread.AddSystemInstruction(
-            "You are an assistant that can perform live searches using the 'grok_tool_live_search' tool. " +
-            "When the user asks for information that requires a search, use the tool with appropriate parameters."
-        );
-
-        var userMessage = "Tell me the latest news about the president today.";
-
-        await WaitForRateLimitAsync();
-
-        var toolCalled = false;
-        string? toolResponseJson = null;
-
-        await foreach (var message in thread.AskQuestion(userMessage, model: model))
-        {
-            if (message is GrokToolResponse { ToolName: GrokToolLiveSearch.ToolName } toolResponse1)
-            {
-                toolCalled = true;
-                toolResponseJson = toolResponse1.ToolResponse;
-                break; // Assuming only one tool call for simplicity
-            }
-        }
-
-        Assert.IsTrue(toolCalled, $"The '{GrokToolLiveSearch.ToolName}' tool was not called.");
-        Assert.IsNotNull(toolResponseJson, "Tool response JSON was null.");
-
-        var toolResponse = JsonConvert.DeserializeObject<GrokToolLiveSearchResponse>(toolResponseJson);
-        Assert.IsNotNull(toolResponse, "Tool response was null.");
-        Assert.IsNull(toolResponse.Error, "Tool returned an error.");
-        Assert.IsNotNull(toolResponse.Summary, "Summary is missing.");
-        Assert.IsTrue(toolResponse.Summary.Length > 0, "Summary is empty.");
-
-        await WaitForRateLimitAsync();
-    }
 
     [DataTestMethod]
     [DataRow("grok-2-vision-latest")]

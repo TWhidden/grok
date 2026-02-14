@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Reflection;
 using GrokSdk.Tests.Helpers;
 using Newtonsoft.Json;
@@ -67,7 +67,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             }
         };
 
-        // Test 1: GrokTool_choice = "auto" - Model decides whether to use the GrokTool
+        // Test 1: tool_choice = "auto" - Model decides whether to use the tool
         var requestAuto = new GrokChatCompletionRequest
         {
             Messages = new Collection<GrokMessage>
@@ -99,13 +99,13 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         var grokToolCalledAuto = autoChoice.Message.Tool_calls?.Count > 0;
         var contentProvidedAuto = !string.IsNullOrEmpty(autoChoice.Message.Content);
         Assert.IsTrue(grokToolCalledAuto || contentProvidedAuto,
-            "Response (auto) should either call a GrokTool or provide content.");
+            "Response (auto) should either call a tool or provide content.");
         if (grokToolCalledAuto)
         {
             Assert.AreEqual("get_current_temperature", autoChoice.Message.Tool_calls?.First().Function.Name,
-                "GrokTool call (auto) should match the defined GrokTool.");
+                "Tool call (auto) should match the defined tool.");
             Assert.AreEqual(GrokChoiceFinish_reason.Tool_calls, autoChoice.Finish_reason,
-                "Finish reason (Tool_choice = auto) should be 'Tool_calls' when a GrokTool is used.");
+                "Finish reason (Tool_choice = auto) should be 'Tool_calls' when a tool is used.");
         }
         else
         {
@@ -113,7 +113,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                 "Finish reason (auto) should be 'stop' when content is provided.");
         }
 
-        // Test 2: GrokTool_choice = "none" - No GrokTool should be called
+        // Test 2: tool_choice = "none" - No tool should be called
         var requestNone = new GrokChatCompletionRequest
         {
             Messages = new Collection<GrokMessage>
@@ -148,7 +148,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         Assert.AreEqual(GrokChoiceFinish_reason.Stop, noneChoice.Finish_reason,
             "Finish reason (none) should be 'stop'.");
 
-        // Test 3: GrokTool_choice = "required" - Forces a GrokTool call
+        // Test 3: tool_choice = "required" - Forces a tool call
         var requestRequired = new GrokChatCompletionRequest
         {
             Messages = new Collection<GrokMessage>
@@ -179,11 +179,11 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         Assert.IsTrue(responseRequired.Choices.Count > 0, "Response (required) should have at least one choice.");
         var requiredChoice = responseRequired.Choices.First();
         Assert.IsTrue(requiredChoice.Message.Tool_calls?.Count > 0,
-            "Response (required) should call a GrokTool since GrokTool_choice is 'required'.");
+            "Response (required) should call a tool since tool_choice is 'required'.");
         Assert.AreEqual("get_current_temperature", requiredChoice.Message.Tool_calls.First().Function.Name,
-            "GrokTool call (required) should match the defined GrokTool.");
+            "Tool call (required) should match the defined tool.");
         Assert.AreEqual(GrokChoiceFinish_reason.Tool_calls, requiredChoice.Finish_reason,
-            "Finish reason (required) should be 'GrokTool_calls'.");
+            "Finish reason (required) should be 'tool_calls'.");
 
         // Safety Check for Live Unit Tests to prevent API exhaustion
         await WaitForRateLimitAsync();
@@ -199,7 +199,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
 
-        // Define the GrokTool
+        // Define the tool
         var grokTools = new Collection<GrokTool>
         {
             new()
@@ -259,22 +259,22 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         var choice = response.Choices.First();
         if (choice.Message.Tool_calls?.Count > 0)
         {
-            // Step 2: Simulate GrokTool execution (mock or real API call)
+            // Step 2: Simulate tool execution (mock or real API call)
             var grokToolCall = choice.Message.Tool_calls.First();
             Assert.AreEqual("get_current_temperature", grokToolCall.Function.Name,
-                "GrokTool should be get_current_temperature.");
+                "Tool should be get_current_temperature.");
 
             var args = JsonConvert.DeserializeObject<Dictionary<string, string>>(grokToolCall.Function.Arguments) ??
                        throw new Exception("Could not process arguments from function");
             var location = args["location"];
-            Assert.IsTrue(location.ToLower().Contains("paris"), "GrokTool call should target Paris.");
+            Assert.IsTrue(location.ToLower().Contains("paris"), "Tool call should target Paris.");
 
             // Mock implementation (replace with real API call if desired)
             var result = location.ToLower().Contains("paris")
                 ? "{\"location\": \"Paris\", \"temperature\": 15, \"unit\": \"celsius\"}"
                 : "{\"location\": \"unknown\", \"temperature\": null, \"unit\": \"celsius\"}";
 
-            // Add assistant message and GrokTool result to messages
+            // Add assistant message and tool result to messages
             messages.Add(choice.Message);
             messages.Add(new GrokToolMessage
             {
@@ -329,7 +329,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         using var httpClient = new HttpClient();
         var client = new GrokClient(httpClient, ApiToken ?? throw new Exception("API Token not set"));
 
-        // Define a GrokTool to get satellite position
+        // Define a tool to get satellite position
         var grokTools = new Collection<GrokTool>
         {
             new()
@@ -393,13 +393,13 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         {
             var grokToolCall = choice.Message.Tool_calls.First();
             Assert.AreEqual("get_starlink_position", grokToolCall.Function.Name,
-                "GrokTool should be get_starlink_position.");
+                "Tool should be get_starlink_position.");
 
             var args =
                 JsonConvert.DeserializeObject<Dictionary<string, int>>(grokToolCall.Function.Arguments) ??
                 throw new Exception("Could not process arguments from function");
             var noradId = args["norad_id"];
-            Assert.AreEqual(25544, noradId, "GrokTool call should target NORAD ID 25544.");
+            Assert.AreEqual(25544, noradId, "Tool call should target NORAD ID 25544.");
 
             // Step 2: Hit the real N2YO API
             var apiKey = GetN2YoApiKeyFromFileOrEnv();
@@ -450,7 +450,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
                     "{\"norad_id\": 25544, \"latitude\": 51.0, \"longitude\": -0.1, \"altitude\": 420, \"timestamp\": 1739999999}";
             }
 
-            // Add assistant message and GrokTool result
+            // Add assistant message and tool result
             messages.Add(choice.Message);
             messages.Add(new GrokToolMessage
             {
@@ -495,7 +495,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         else
         {
             Assert.Inconclusive(
-                "Grok did not request a GrokTool call with 'auto'; cannot test external API integration.");
+                "Grok did not request a tool call with 'auto'; cannot test external API integration.");
         }
 
         // Safety Check for Live Unit Tests to prevent API exhaustion
@@ -528,7 +528,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             }
         };
 
-        // Define a GrokTool to count Starlink satellites
+        // Define a tool to count Starlink satellites
         var grokTools = new Collection<GrokTool>
         {
             new()
@@ -564,7 +564,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
             Stream = false,
             Temperature = 0f,
             Tools = grokTools,
-            Tool_choice = Tool_choice.Auto // Let Grok decide to use the GrokTool
+            Tool_choice = Tool_choice.Auto // Let Grok decide to use the tool
         };
 
         var response = await client.CreateChatCompletionAsync(request);
@@ -589,7 +589,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
 
                 var result = JsonConvert.SerializeObject(totalCount);
 
-                // Add assistant message and GrokTool result
+                // Add assistant message and tool result
                 messages.Add(choice.Message);
                 messages.Add(new GrokToolMessage
                 {
@@ -619,7 +619,7 @@ public class GrokClientToolChoiceTests : GrokClientTestBaseClass
         }
         else
         {
-            Assert.Fail("The GrokTool was not called like it should have been!");
+            Assert.Fail("The tool was not called like it should have been!");
         }
 
         // Safety Check for Live Unit Tests to prevent API exhaustion

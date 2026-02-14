@@ -50,7 +50,7 @@ public class GrokImageUnderstandingTests : GrokClientTestBaseClass
         var request = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-2-vision-1212",
+            Model = "grok-4-1-fast-reasoning",
             Stream = false
         };
 
@@ -106,7 +106,7 @@ public class GrokImageUnderstandingTests : GrokClientTestBaseClass
         var request = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-2-vision-1212",
+            Model = "grok-4-1-fast-reasoning",
             Stream = false
         };
 
@@ -161,7 +161,7 @@ public class GrokImageUnderstandingTests : GrokClientTestBaseClass
         var request = new GrokChatCompletionRequest
         {
             Messages = messages,
-            Model = "grok-2-vision-1212",
+            Model = "grok-4-1-fast-reasoning",
             Stream = false
         };
 
