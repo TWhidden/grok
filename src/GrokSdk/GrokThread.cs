@@ -235,25 +235,79 @@ public class GrokThread
     /// Registers a tool with the thread, making it available for Grok to call during conversations.
     /// </summary>
     /// <param name="tool">The tool to register.</param>
+    /// <param name="nameOverride">Optional name override. When provided, the tool is registered under this name instead of <see cref="IGrokTool.Name"/>.</param>
     /// <exception cref="ArgumentNullException">Thrown if <paramref name="tool"/> is null.</exception>
     /// <exception cref="ArgumentException">Thrown if a tool with the same name is already registered.</exception>
-    public void RegisterTool(IGrokTool tool)
+    public void RegisterTool(IGrokTool tool, string? nameOverride = null)
     {
         if (tool == null)
             throw new ArgumentNullException(nameof(tool));
 
+        var name = nameOverride ?? tool.Name;
 
 #if NETSTANDARD2_0
-        if (_tools.ContainsKey(tool.Name))
+        if (_tools.ContainsKey(name))
         {
-            throw new ArgumentException($"A tool with name '{tool.Name}' already exists.");
+            throw new ArgumentException($"A tool with name '{name}' already exists.");
         }
-        _tools.Add(tool.Name, tool);
+        _tools.Add(name, tool);
 #else
-        if (!_tools.TryAdd(tool.Name, tool))
-            throw new ArgumentException($"A tool with name '{tool.Name}' already exists.");
+        if (!_tools.TryAdd(name, tool))
+            throw new ArgumentException($"A tool with name '{name}' already exists.");
 #endif
     }
+
+    /// <summary>
+    /// Unregisters a tool by name, removing it from the set of tools available to Grok.
+    /// </summary>
+    /// <param name="name">The registered name of the tool to remove.</param>
+    /// <returns><c>true</c> if the tool was found and removed; <c>false</c> if no tool with that name was registered.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="name"/> is null.</exception>
+    public bool UnregisterTool(string name)
+    {
+        if (name == null)
+            throw new ArgumentNullException(nameof(name));
+
+        return _tools.Remove(name);
+    }
+
+    /// <summary>
+    /// Unregisters a tool by its instance, removing it from the set of tools available to Grok.
+    /// The tool is matched by its <see cref="IGrokTool.Name"/> property.
+    /// </summary>
+    /// <param name="tool">The tool to remove.</param>
+    /// <returns><c>true</c> if the tool was found and removed; <c>false</c> if no matching tool was registered.</returns>
+    /// <exception cref="ArgumentNullException">Thrown if <paramref name="tool"/> is null.</exception>
+    public bool UnregisterTool(IGrokTool tool)
+    {
+        if (tool == null)
+            throw new ArgumentNullException(nameof(tool));
+
+        return _tools.Remove(tool.Name);
+    }
+
+    /// <summary>
+    /// Removes all registered tools from the thread.
+    /// </summary>
+    public void UnregisterAllTools()
+    {
+        _tools.Clear();
+    }
+
+    /// <summary>
+    /// Checks whether a tool with the specified name is currently registered.
+    /// </summary>
+    /// <param name="name">The tool name to check.</param>
+    /// <returns><c>true</c> if a tool with that name is registered; otherwise <c>false</c>.</returns>
+    public bool IsToolRegistered(string name)
+    {
+        return _tools.ContainsKey(name);
+    }
+
+    /// <summary>
+    /// Gets the names of all currently registered tools.
+    /// </summary>
+    public IReadOnlyCollection<string> RegisteredToolNames => _tools.Keys.ToList().AsReadOnly();
 
     /// <summary>
     /// Applies the current options to the existing conversation state, performing any necessary cleanup.
@@ -381,14 +435,14 @@ public class GrokThread
                 Temperature = temperature,
                 Stream = false, // Always non-streaming
                 Tools = _tools.Any()
-                    ? _tools.Values.Select(t => new GrokTool
+                    ? _tools.Select(kvp => new GrokTool
                     {
                         Type = GrokToolType.Function,
                         Function = new GrokFunctionDefinition
                         {
-                            Name = t.Name,
-                            Description = t.Description,
-                            Parameters = t.Parameters
+                            Name = kvp.Key,
+                            Description = kvp.Value.Description,
+                            Parameters = kvp.Value.Parameters
                         }
                     }).ToList()
                     : null,

@@ -5,6 +5,17 @@ All notable changes to GrokSdk will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-02-26
+
+### Added
+
+- **Tool Unregistration**: New methods on `GrokThread` for dynamically removing tools at runtime.
+  - `UnregisterTool(string name)` — remove a tool by its registered name.
+  - `UnregisterTool(IGrokTool tool)` — remove a tool by its instance (matched by `IGrokTool.Name`).
+  - `UnregisterAllTools()` — clear all registered tools.
+- **Tool Name Override**: `RegisterTool(IGrokTool tool, string? nameOverride = null)` now accepts an optional name override, allowing the same tool implementation to be registered under a different name.
+- **Tool Introspection**: New `IsToolRegistered(string name)` method and `RegisteredToolNames` read-only property for querying the current set of registered tools.
+
 ## [1.5.0] - 2026-02-16
 
 ### Added

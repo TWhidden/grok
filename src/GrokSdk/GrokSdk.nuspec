@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
 	<metadata>
 		<id>GrokSdk</id>
-		<version>1.5.0</version>
+		<version>1.6.0</version>
 		<authors>Travis Whidden</authors>
 		<description>xAI Grok dotnet integration</description>
 		<tags>xAI Grok dotnet</tags>
@@ -11,6 +11,13 @@
 		<readme>README.md</readme>
 		<icon>xai.png</icon>
 		<releaseNotes>
+## v1.6.0 (February 2026)
+
+### New Features
+- **Tool Unregistration**: New `UnregisterTool(string name)`, `UnregisterTool(IGrokTool tool)`, and `UnregisterAllTools()` methods on `GrokThread` for dynamically removing tools at runtime.
+- **Tool Name Override**: `RegisterTool` now accepts an optional `nameOverride` parameter, allowing the same tool implementation to be registered under a custom name.
+- **Tool Introspection**: New `IsToolRegistered(string name)` method and `RegisteredToolNames` property for querying the current tool set.
+
 ## v1.5.0 (February 2026)
 
 ### New Features

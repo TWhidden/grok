@@ -201,6 +201,7 @@ internal class Program
 - **Conversation Management**: Tracks message history for context-aware multi-turn responses.
 - **Built-in Tools**: Seven built-in tools registered in the console demo: image generation, reasoning, web search, image understanding, code execution, video generation, and MCP.
 - **Custom Tools**: Register your own tools via `GrokToolDefinition` (see below).
+- **Dynamic Tool Management**: Register, unregister, and query tools at runtime — swap capabilities mid-conversation.
 - **Streaming**: Real-time response streaming via `IAsyncEnumerable<GrokMessageBase>`.
 - **Message Types**: Stream yields typed messages — `GrokTextMessage`, `GrokStreamState`, `GrokToolResponse`, `GrokCitationMessage`, `GrokServiceMessage`, `GrokError`.
 - **Compression**: Shrinks history with `CompressHistoryAsync` to optimize tokens.
@@ -224,6 +225,36 @@ thread.RegisterTool(new GrokToolDefinition(
         return $"{{\"temp\": \"72F\", \"city\": \"{parsed!["city"]}\"}}";
     }));
 ```
+
+### Tool Management
+Tools can be dynamically added, removed, and queried at runtime — useful for adapting capabilities mid-conversation:
+
+```csharp
+var thread = new GrokThread(client);
+
+// Register with a custom name override
+var webSearch = new GrokToolWebSearch(client);
+thread.RegisterTool(webSearch, nameOverride: "search_v2");
+
+// Query registered tools
+Console.WriteLine($"Tools: {string.Join(", ", thread.RegisteredToolNames)}");
+Console.WriteLine($"Has search: {thread.IsToolRegistered("search_v2")}");
+
+// Swap tools dynamically
+thread.UnregisterTool("search_v2");
+thread.RegisterTool(new GrokToolCodeExecution(client));
+
+// Clear all tools
+thread.UnregisterAllTools();
+```
+
+**Methods:**
+- `RegisterTool(IGrokTool tool, string? nameOverride = null)` — register a tool, optionally under a custom name.
+- `UnregisterTool(string name)` — remove a tool by its registered name. Returns `true` if found.
+- `UnregisterTool(IGrokTool tool)` — remove a tool by instance (matched by `IGrokTool.Name`).
+- `UnregisterAllTools()` — remove all registered tools.
+- `IsToolRegistered(string name)` — check if a tool name is registered.
+- `RegisteredToolNames` — read-only collection of all registered tool names.
 
 ## Built-in Tools
 

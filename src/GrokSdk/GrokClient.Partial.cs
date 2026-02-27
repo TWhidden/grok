@@ -79,7 +79,7 @@ public partial class GrokClient
                         "Deferred response did not contain a request_id.",
                         status_, responseText, null, null);
 
-                return requestId;
+                return requestId!;
             }
             else
             {

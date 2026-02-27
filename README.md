@@ -24,6 +24,7 @@ If you find this tool helpful or use it in your projects, please drop me a note 
 - **Parallel Tool Execution**: Multiple tool calls execute concurrently for better performance
 - **Streaming Conversations**: Real-time response streaming with state management
 - **Tool Integration**: Extensible architecture for custom tool development
+- **Dynamic Tool Management**: Register, unregister, and query tools at runtime
 - **Thread Management**: Persistent conversation context with history compression
 - **Cross-Platform**: Supports .NET 8.0 and .NET Standard 2.0
 
@@ -598,6 +599,37 @@ await thread.CompressHistoryAsync();
 // Clear conversation history
 thread.ClearMessages();
 ```
+
+### Dynamic Tool Management
+
+Register, unregister, and query tools at runtime — swap capabilities mid-conversation:
+
+```csharp
+var thread = new GrokThread(client);
+
+// Register with a custom name override
+var webSearch = new GrokToolWebSearch(client);
+thread.RegisterTool(webSearch, nameOverride: "search_v2");
+
+// Query registered tools
+Console.WriteLine($"Tools: {string.Join(", ", thread.RegisteredToolNames)}");
+Console.WriteLine($"Has search: {thread.IsToolRegistered("search_v2")}");
+
+// Swap tools dynamically
+thread.UnregisterTool("search_v2");
+thread.RegisterTool(new GrokToolCodeExecution(client));
+
+// Clear all tools
+thread.UnregisterAllTools();
+```
+
+**Available methods:**
+- `RegisterTool(IGrokTool tool, string? nameOverride = null)` — register a tool, optionally under a custom name.
+- `UnregisterTool(string name)` — remove by registered name. Returns `true` if found.
+- `UnregisterTool(IGrokTool tool)` — remove by instance (matched by `IGrokTool.Name`).
+- `UnregisterAllTools()` — clear all tools.
+- `IsToolRegistered(string name)` — check if a name is registered.
+- `RegisteredToolNames` — read-only collection of registered tool names.
 
 ### Model-Specific Usage
 

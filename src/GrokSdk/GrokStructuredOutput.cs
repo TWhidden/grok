@@ -117,10 +117,7 @@ namespace GrokSdk
             var response = await client.CreateChatCompletionAsync(request, cancellationToken).ConfigureAwait(false);
             var content = response.Choices.FirstOrDefault()?.Message?.Content;
 
-            if (string.IsNullOrEmpty(content))
-                return default;
-
-            return JsonConvert.DeserializeObject<T>(content);
+            return string.IsNullOrWhiteSpace(content) ? null : JsonConvert.DeserializeObject<T>(content!);
         }
 
         /// <summary>
