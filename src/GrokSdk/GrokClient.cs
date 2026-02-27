@@ -611,6 +611,335 @@ namespace GrokSdk
             }
         }
 
+        /// <summary>
+        /// Start video generation
+        /// </summary>
+        /// <remarks>
+        /// Starts an asynchronous video generation request. Returns a request_id that can be
+        /// <br/>used to poll for the result. Supports text-to-video, image-to-video, and video editing.
+        /// </remarks>
+        /// <returns>Video generation started</returns>
+        /// <exception cref="GrokSdkException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<GrokVideoGenerationStartResponse> CreateVideoGenerationAsync(GrokVideoGenerationRequest body)
+        {
+            return CreateVideoGenerationAsync(body, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <summary>
+        /// Start video generation
+        /// </summary>
+        /// <remarks>
+        /// Starts an asynchronous video generation request. Returns a request_id that can be
+        /// <br/>used to poll for the result. Supports text-to-video, image-to-video, and video editing.
+        /// </remarks>
+        /// <returns>Video generation started</returns>
+        /// <exception cref="GrokSdkException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<GrokVideoGenerationStartResponse> CreateVideoGenerationAsync(GrokVideoGenerationRequest body, System.Threading.CancellationToken cancellationToken)
+        {
+            if (body == null)
+                throw new System.ArgumentNullException("body");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    var json_ = Newtonsoft.Json.JsonConvert.SerializeObject(body, JsonSerializerSettings);
+                    var content_ = new System.Net.Http.StringContent(json_);
+                    content_.Headers.ContentType = System.Net.Http.Headers.MediaTypeHeaderValue.Parse("application/json");
+                    request_.Content = content_;
+                    request_.Method = new System.Net.Http.HttpMethod("POST");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "videos/generations"
+                    urlBuilder_.Append("videos/generations");
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<GrokVideoGenerationStartResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 400)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<GrokErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new GrokSdkException<GrokErrorResponse>((objectResponse_.Object.Error ?? "Invalid request"), status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new GrokSdkException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Get video generation result
+        /// </summary>
+        /// <remarks>
+        /// Polls for the result of a video generation request. Returns the status and video data when complete.
+        /// </remarks>
+        /// <param name="request_id">The request ID returned by createVideoGeneration.</param>
+        /// <returns>Video generation result</returns>
+        /// <exception cref="GrokSdkException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<GrokVideoGenerationResult> GetVideoGenerationAsync(string request_id)
+        {
+            return GetVideoGenerationAsync(request_id, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <summary>
+        /// Get video generation result
+        /// </summary>
+        /// <remarks>
+        /// Polls for the result of a video generation request. Returns the status and video data when complete.
+        /// </remarks>
+        /// <param name="request_id">The request ID returned by createVideoGeneration.</param>
+        /// <returns>Video generation result</returns>
+        /// <exception cref="GrokSdkException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<GrokVideoGenerationResult> GetVideoGenerationAsync(string request_id, System.Threading.CancellationToken cancellationToken)
+        {
+            if (request_id == null)
+                throw new System.ArgumentNullException("request_id");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "videos/{request_id}"
+                    urlBuilder_.Append("videos/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(request_id, System.Globalization.CultureInfo.InvariantCulture)));
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<GrokVideoGenerationResult>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 404)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<GrokErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new GrokSdkException<GrokErrorResponse>((objectResponse_.Object.Error ?? "Request not found"), status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new GrokSdkException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Get deferred chat completion result
+        /// </summary>
+        /// <remarks>
+        /// Retrieves the result of a deferred chat completion. Returns 202 Accepted with empty body
+        /// <br/>if the result is not ready yet. The result can only be retrieved once within 24 hours.
+        /// </remarks>
+        /// <param name="request_id">The request ID returned by createDeferredChatCompletion.</param>
+        /// <returns>Deferred completion result (when ready)</returns>
+        /// <exception cref="GrokSdkException">A server side error occurred.</exception>
+        public virtual System.Threading.Tasks.Task<GrokChatCompletionResponse> GetDeferredChatCompletionAsync(string request_id)
+        {
+            return GetDeferredChatCompletionAsync(request_id, System.Threading.CancellationToken.None);
+        }
+
+        /// <param name="cancellationToken">A cancellation token that can be used by other objects or threads to receive notice of cancellation.</param>
+        /// <summary>
+        /// Get deferred chat completion result
+        /// </summary>
+        /// <remarks>
+        /// Retrieves the result of a deferred chat completion. Returns 202 Accepted with empty body
+        /// <br/>if the result is not ready yet. The result can only be retrieved once within 24 hours.
+        /// </remarks>
+        /// <param name="request_id">The request ID returned by createDeferredChatCompletion.</param>
+        /// <returns>Deferred completion result (when ready)</returns>
+        /// <exception cref="GrokSdkException">A server side error occurred.</exception>
+        public virtual async System.Threading.Tasks.Task<GrokChatCompletionResponse> GetDeferredChatCompletionAsync(string request_id, System.Threading.CancellationToken cancellationToken)
+        {
+            if (request_id == null)
+                throw new System.ArgumentNullException("request_id");
+
+            var client_ = _httpClient;
+            var disposeClient_ = false;
+            try
+            {
+                using (var request_ = new System.Net.Http.HttpRequestMessage())
+                {
+                    request_.Method = new System.Net.Http.HttpMethod("GET");
+                    request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("application/json"));
+
+                    var urlBuilder_ = new System.Text.StringBuilder();
+                    if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);
+                    // Operation Path: "chat/deferred-completion/{request_id}"
+                    urlBuilder_.Append("chat/deferred-completion/");
+                    urlBuilder_.Append(System.Uri.EscapeDataString(ConvertToString(request_id, System.Globalization.CultureInfo.InvariantCulture)));
+
+                    PrepareRequest(client_, request_, urlBuilder_);
+
+                    var url_ = urlBuilder_.ToString();
+                    request_.RequestUri = new System.Uri(url_, System.UriKind.RelativeOrAbsolute);
+
+                    PrepareRequest(client_, request_, url_);
+
+                    var response_ = await client_.SendAsync(request_, System.Net.Http.HttpCompletionOption.ResponseHeadersRead, cancellationToken).ConfigureAwait(false);
+                    var disposeResponse_ = true;
+                    try
+                    {
+                        var headers_ = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.IEnumerable<string>>();
+                        foreach (var item_ in response_.Headers)
+                            headers_[item_.Key] = item_.Value;
+                        if (response_.Content != null && response_.Content.Headers != null)
+                        {
+                            foreach (var item_ in response_.Content.Headers)
+                                headers_[item_.Key] = item_.Value;
+                        }
+
+                        ProcessResponse(client_, response_);
+
+                        var status_ = (int)response_.StatusCode;
+                        if (status_ == 200)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<GrokChatCompletionResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            return objectResponse_.Object;
+                        }
+                        else
+                        if (status_ == 202)
+                        {
+                            string responseText_ = ( response_.Content == null ) ? string.Empty : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new GrokSdkException("Result not ready yet", status_, responseText_, headers_, null);
+                        }
+                        else
+                        if (status_ == 404)
+                        {
+                            var objectResponse_ = await ReadObjectResponseAsync<GrokErrorResponse>(response_, headers_, cancellationToken).ConfigureAwait(false);
+                            if (objectResponse_.Object == null)
+                            {
+                                throw new GrokSdkException("Response was null which was not expected.", status_, objectResponse_.Text, headers_, null);
+                            }
+                            throw new GrokSdkException<GrokErrorResponse>((objectResponse_.Object.Error ?? "Request not found"), status_, objectResponse_.Text, headers_, objectResponse_.Object, null);
+                        }
+                        else
+                        {
+                            var responseData_ = response_.Content == null ? null : await ReadAsStringAsync(response_.Content, cancellationToken).ConfigureAwait(false);
+                            throw new GrokSdkException("The HTTP status code of the response was not expected (" + status_ + ").", status_, responseData_, headers_, null);
+                        }
+                    }
+                    finally
+                    {
+                        if (disposeResponse_)
+                            response_.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                if (disposeClient_)
+                    client_.Dispose();
+            }
+        }
+
         protected struct ObjectResponseResult<T>
         {
             public ObjectResponseResult(T responseObject, string responseText)
@@ -799,6 +1128,15 @@ namespace GrokSdk
         [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
         public GrokChatCompletionRequestReasoning_effort? Reasoning_effort { get; set; }
 
+        [Newtonsoft.Json.JsonProperty("response_format", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public GrokResponseFormat Response_format { get; set; }
+
+        /// <summary>
+        /// When set to true, the request is processed asynchronously. The response will contain a request_id that can be used to poll for the result via GET /chat/deferred-completion/{request_id}.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("deferred", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Deferred { get; set; } = false;
+
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -880,6 +1218,7 @@ namespace GrokSdk
     [JsonInheritanceAttribute("user", typeof(GrokUserMessage))]
     [JsonInheritanceAttribute("assistant", typeof(GrokAssistantMessage))]
     [JsonInheritanceAttribute("tool", typeof(GrokToolMessage))]
+    [JsonInheritanceAttribute("developer", typeof(GrokDeveloperMessage))]
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public partial class GrokMessage
     {
@@ -892,6 +1231,23 @@ namespace GrokSdk
             get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
             set { _additionalProperties = value; }
         }
+
+    }
+
+    /// <summary>
+    /// Developer-provided instructions that the model should follow regardless of user input. Similar to system messages but with stronger instruction-following guarantees.
+    /// <br/>
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GrokDeveloperMessage : GrokMessage
+    {
+
+        /// <summary>
+        /// Developer instruction content
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("content", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Content { get; set; }
 
     }
 
@@ -1347,7 +1703,7 @@ namespace GrokSdk
         /// The model to use for image generation
         /// </summary>
         [Newtonsoft.Json.JsonProperty("model", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
-        public string Model { get; set; } = "grok-2-image-1212";
+        public string Model { get; set; } = "grok-imagine-image";
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -1489,6 +1845,21 @@ namespace GrokSdk
         /// </summary>
         [Newtonsoft.Json.JsonProperty("previous_response_id", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string Previous_response_id { get; set; }
+
+        /// <summary>
+        /// List of additional data to include in the response (e.g., "reasoning.encrypted_content", "inline_citations").
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("include", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Include { get; set; }
+
+        /// <summary>
+        /// Maximum number of agentic turns the model can take. Limits tool call loops.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("max_turns", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int? Max_turns { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("response_format", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public GrokResponseFormat Response_format { get; set; }
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -1642,6 +2013,54 @@ namespace GrokSdk
         [Newtonsoft.Json.JsonProperty("enable_video_understanding", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public bool Enable_video_understanding { get; set; }
 
+        /// <summary>
+        /// For file_search - list of collection/vector store IDs to search.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("vector_store_ids", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Vector_store_ids { get; set; }
+
+        /// <summary>
+        /// For file_search - maximum number of results to return.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("max_num_results", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int Max_num_results { get; set; }
+
+        /// <summary>
+        /// For mcp - the URL of the MCP server to connect to. Only Streaming HTTP and SSE transports are supported.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("server_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Server_url { get; set; }
+
+        /// <summary>
+        /// For mcp - a label to identify the server (used for tool call prefixing).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("server_label", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Server_label { get; set; }
+
+        /// <summary>
+        /// For mcp - a description of what the server provides.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("server_description", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Server_description { get; set; }
+
+        /// <summary>
+        /// For mcp - list of specific tool names to allow (empty allows all).
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("allowed_tool_names", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.ICollection<string> Allowed_tool_names { get; set; }
+
+        /// <summary>
+        /// For mcp - a token that will be set in the Authorization header on requests to the MCP server.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("authorization", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Authorization { get; set; }
+
+        /// <summary>
+        /// For mcp - additional headers to include in requests to the MCP server.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("extra_headers", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public System.Collections.Generic.IDictionary<string, string> Extra_headers { get; set; }
+
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
         [Newtonsoft.Json.JsonExtensionData]
@@ -1671,6 +2090,12 @@ namespace GrokSdk
 
         [System.Runtime.Serialization.EnumMember(Value = @"function")]
         Function = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"file_search")]
+        File_search = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"mcp")]
+        Mcp = 5,
 
     }
 
@@ -1782,6 +2207,73 @@ namespace GrokSdk
 
         [Newtonsoft.Json.JsonProperty("user", Required = Newtonsoft.Json.Required.Default, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
         public string User { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    /// <summary>
+    /// The format of the response output. Use for structured outputs (JSON schema enforcement).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GrokResponseFormat
+    {
+
+        /// <summary>
+        /// The type of response format.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("type", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public GrokResponseFormatType Type { get; set; }
+
+        [Newtonsoft.Json.JsonProperty("json_schema", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public GrokJsonSchemaDefinition Json_schema { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    /// <summary>
+    /// A JSON Schema definition for structured output.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GrokJsonSchemaDefinition
+    {
+
+        /// <summary>
+        /// A name for the schema, used for identification.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("name", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Name { get; set; }
+
+        /// <summary>
+        /// The JSON Schema object defining the expected output structure.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("schema", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required]
+        public object Schema { get; set; } = new object();
+
+        /// <summary>
+        /// Whether the model must strictly follow the schema.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("strict", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Strict { get; set; } = true;
 
         private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
 
@@ -2088,6 +2580,159 @@ namespace GrokSdk
 
     }
 
+    /// <summary>
+    /// Request to start a video generation.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GrokVideoGenerationRequest
+    {
+
+        /// <summary>
+        /// The model to use for video generation (e.g., "grok-imagine-video").
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("model", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Model { get; set; }
+
+        /// <summary>
+        /// Text description of the video to generate.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("prompt", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Prompt { get; set; }
+
+        /// <summary>
+        /// Source image for image-to-video generation.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("image", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public GrokImageUrl Image { get; set; }
+
+        /// <summary>
+        /// URL of a source video for video editing. Max input video length is 8.7 seconds.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("video_url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Video_url { get; set; }
+
+        /// <summary>
+        /// Video duration in seconds (1-15). Not supported for video editing.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("duration", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [System.ComponentModel.DataAnnotations.Range(1, 15)]
+        public int Duration { get; set; }
+
+        /// <summary>
+        /// Aspect ratio of the output video. Options: 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3. Default: 16:9. Not supported for video editing.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("aspect_ratio", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public GrokVideoGenerationRequestAspect_ratio Aspect_ratio { get; set; }
+
+        /// <summary>
+        /// Resolution of the output video. Options: 480p, 720p. Default: 480p. Not supported for video editing.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("resolution", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        [Newtonsoft.Json.JsonConverter(typeof(Newtonsoft.Json.Converters.StringEnumConverter))]
+        public GrokVideoGenerationRequestResolution Resolution { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    /// <summary>
+    /// Response from starting a video generation request.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GrokVideoGenerationStartResponse
+    {
+
+        /// <summary>
+        /// The request ID to use for polling the video generation result.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("request_id", Required = Newtonsoft.Json.Required.Always)]
+        [System.ComponentModel.DataAnnotations.Required(AllowEmptyStrings = true)]
+        public string Request_id { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    /// <summary>
+    /// Result of a video generation request (returned when complete).
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GrokVideoGenerationResult
+    {
+
+        [Newtonsoft.Json.JsonProperty("video", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public GrokVideoData Video { get; set; }
+
+        /// <summary>
+        /// The model used for generation.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("model", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Model { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
+    /// <summary>
+    /// Video data from a completed generation.
+    /// </summary>
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public partial class GrokVideoData
+    {
+
+        /// <summary>
+        /// Temporary URL to download the generated video. Download promptly as URLs expire.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("url", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public string Url { get; set; }
+
+        /// <summary>
+        /// Duration of the generated video in seconds.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("duration", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public int Duration { get; set; }
+
+        /// <summary>
+        /// Whether the video passed content moderation.
+        /// </summary>
+        [Newtonsoft.Json.JsonProperty("respect_moderation", Required = Newtonsoft.Json.Required.DisallowNull, NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public bool Respect_moderation { get; set; }
+
+        private System.Collections.Generic.IDictionary<string, object> _additionalProperties;
+
+        [Newtonsoft.Json.JsonExtensionData]
+        public System.Collections.Generic.IDictionary<string, object> AdditionalProperties
+        {
+            get { return _additionalProperties ?? (_additionalProperties = new System.Collections.Generic.Dictionary<string, object>()); }
+            set { _additionalProperties = value; }
+        }
+
+    }
+
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum Tool_choice
     {
@@ -2247,6 +2892,18 @@ namespace GrokSdk
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum GrokResponseFormatType
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"json_schema")]
+        Json_schema = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"text")]
+        Text = 1,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
     public enum GrokResponseOutputItemType
     {
 
@@ -2271,6 +2928,12 @@ namespace GrokSdk
         [System.Runtime.Serialization.EnumMember(Value = @"custom_tool_call")]
         Custom_tool_call = 6,
 
+        [System.Runtime.Serialization.EnumMember(Value = @"file_search_call")]
+        File_search_call = 7,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"mcp_call")]
+        Mcp_call = 8,
+
     }
 
     [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
@@ -2285,6 +2948,45 @@ namespace GrokSdk
 
         [System.Runtime.Serialization.EnumMember(Value = @"incomplete")]
         Incomplete = 2,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum GrokVideoGenerationRequestAspect_ratio
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"1:1")]
+        _11 = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"16:9")]
+        _169 = 1,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"9:16")]
+        _916 = 2,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"4:3")]
+        _43 = 3,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"3:4")]
+        _34 = 4,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"3:2")]
+        _32 = 5,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"2:3")]
+        _23 = 6,
+
+    }
+
+    [System.CodeDom.Compiler.GeneratedCode("NJsonSchema", "14.6.3.0 (NJsonSchema v11.5.2.0 (Newtonsoft.Json v13.0.0.0))")]
+    public enum GrokVideoGenerationRequestResolution
+    {
+
+        [System.Runtime.Serialization.EnumMember(Value = @"480p")]
+        _480p = 0,
+
+        [System.Runtime.Serialization.EnumMember(Value = @"720p")]
+        _720p = 1,
 
     }
 

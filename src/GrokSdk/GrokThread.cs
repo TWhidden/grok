@@ -1,4 +1,6 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using GrokSdk.Tools;
 using System.Threading.Channels;
 
@@ -104,6 +106,7 @@ public class GrokThread
     private readonly Dictionary<string, IGrokTool> _tools = new();
     private GrokMessage? _systemMessage;
     private string? _lastSystemInstruction;
+    private bool _useDeveloperRole;
 
     private int _maxTokens = 131072; // Default, updated per model
     private GrokThreadOptions _options;
@@ -167,7 +170,20 @@ public class GrokThread
     public void AddSystemInstruction(string? systemInstruction)
     {
         _lastSystemInstruction = systemInstruction;
+        _useDeveloperRole = false;
         if (systemInstruction != null) _systemMessage = new GrokSystemMessage { Content = systemInstruction };
+    }
+
+    /// <summary>
+    ///     Provide developer-level instructions that the model should follow regardless of user input.
+    ///     Similar to system instructions but with stronger instruction-following guarantees.
+    /// </summary>
+    /// <param name="developerInstruction">The developer instruction to add.</param>
+    public void AddDeveloperInstruction(string? developerInstruction)
+    {
+        _lastSystemInstruction = developerInstruction;
+        _useDeveloperRole = true;
+        if (developerInstruction != null) _systemMessage = new GrokDeveloperMessage { Content = developerInstruction };
     }
 
     /// <summary>
@@ -207,7 +223,10 @@ public class GrokThread
             var compressedSummary = message.Message;
             _conversationQueue.Clear();
             _systemMessage = null;
-            AddSystemInstruction(_lastSystemInstruction);
+            if (_useDeveloperRole)
+                AddDeveloperInstruction(_lastSystemInstruction);
+            else
+                AddSystemInstruction(_lastSystemInstruction);
             AddUserMessage(compressedSummary);
         }
     }
@@ -263,6 +282,7 @@ public class GrokThread
     private string GetMessageText(GrokMessage message)
     {
         if (message is GrokSystemMessage sys) return sys.Content ?? "";
+        if (message is GrokDeveloperMessage dev) return dev.Content ?? "";
         if (message is GrokUserMessage user) return string.Join("", user.Content.OfType<GrokTextPart>().Select(tp => tp.Text));
         if (message is GrokAssistantMessage ass) return ass.Content ?? "";
         if (message is GrokToolMessage tool) return tool.Content ?? "";
@@ -381,29 +401,33 @@ public class GrokThread
 
             if (choice.Message.Tool_calls?.Count > 0)
             {
+                // Execute all tool calls in parallel
+                var toolTasks = new List<(GrokToolCall ToolCall, Task<string> ResultTask)>();
+                
                 foreach (var toolCall in choice.Message.Tool_calls)
                 {
                     if (_tools.TryGetValue(toolCall.Function.Name, out var tool))
                     {
-                        channel.Writer.TryWrite(new GrokStreamState(StreamState.Streaming));
-
-                        channel.Writer.TryWrite(new GrokStreamState(StreamState.CallingTool));
-                        
-                        // Execute the tool
-                        var result = await tool.ExecuteAsync(toolCall.Function.Arguments);
-
-                        // the channel reader may care about this raw data -
-                        // it could be used in an outside resource like an image URL
-                        channel.Writer.TryWrite(new GrokToolResponse(toolCall.Function.Name, result));
-
-                        // Respond to Grok accordingly
-                        _conversationQueue.Enqueue(new GrokToolMessage { Content = result, Tool_call_id = toolCall.Id });
-                        TrimQueue();
+                        toolTasks.Add((toolCall, tool.ExecuteAsync(toolCall.Function.Arguments)));
                     }
                     else
                     {
                         throw new InvalidOperationException($"Tool '{toolCall.Function.Name}' not found.");
                     }
+                }
+
+                channel.Writer.TryWrite(new GrokStreamState(StreamState.CallingTool));
+
+                // Await all tool executions
+                await Task.WhenAll(toolTasks.Select(t => t.ResultTask));
+
+                // Process results in order
+                foreach (var (toolCall, resultTask) in toolTasks)
+                {
+                    var result = await resultTask;
+                    channel.Writer.TryWrite(new GrokToolResponse(toolCall.Function.Name, result));
+                    _conversationQueue.Enqueue(new GrokToolMessage { Content = result, Tool_call_id = toolCall.Id });
+                    TrimQueue();
                 }
             }
             else
@@ -411,6 +435,17 @@ public class GrokThread
                 toolCallsPending = false;
                 _conversationQueue.Enqueue(choice.Message);
                 TrimQueue();
+
+                // Surface citations if present
+                if (response.Citations?.Count > 0)
+                {
+                    var citations = response.Citations.Select(url => new GrokCitation
+                    {
+                        Type = "url_citation",
+                        Url = url
+                    }).ToList();
+                    channel.Writer.TryWrite(new GrokCitationMessage(citations));
+                }
 
                 // Send the final response to the channel
                 channel.Writer.TryWrite(new GrokTextMessage(choice.Message.Content));

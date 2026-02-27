@@ -145,6 +145,87 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GrokErrorResponse'
+  /videos/generations:
+    post:
+      summary: Start video generation
+      description: |
+        Starts an asynchronous video generation request. Returns a request_id that can be
+        used to poll for the result. Supports text-to-video, image-to-video, and video editing.
+      operationId: createVideoGeneration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GrokVideoGenerationRequest'
+      responses:
+        '200':
+          description: Video generation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokVideoGenerationStartResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokErrorResponse'
+  /videos/{request_id}:
+    get:
+      summary: Get video generation result
+      description: |
+        Polls for the result of a video generation request. Returns the status and video data when complete.
+      operationId: getVideoGeneration
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The request ID returned by createVideoGeneration.
+      responses:
+        '200':
+          description: Video generation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokVideoGenerationResult'
+        '404':
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokErrorResponse'
+  /chat/deferred-completion/{request_id}:
+    get:
+      summary: Get deferred chat completion result
+      description: |
+        Retrieves the result of a deferred chat completion. Returns 202 Accepted with empty body
+        if the result is not ready yet. The result can only be retrieved once within 24 hours.
+      operationId: getDeferredChatCompletion
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The request ID returned by createDeferredChatCompletion.
+      responses:
+        '200':
+          description: Deferred completion result (when ready)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokChatCompletionResponse'
+        '202':
+          description: Result not ready yet
+        '404':
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GrokErrorResponse'
 components:
   schemas:
     GrokChatCompletionRequest:
@@ -208,6 +289,12 @@ components:
           nullable: true
           default: null
           description: Controls how much time the model spends thinking before responding. Only applicable for reasoning-capable models (e.g., grok-3-mini, grok-3-mini-fast). 'low' for quick responses, 'high' for complex reasoning.
+        response_format:
+          $ref: '#/components/schemas/GrokResponseFormat'
+        deferred:
+          type: boolean
+          description: When set to true, the request is processed asynchronously. The response will contain a request_id that can be used to poll for the result via GET /chat/deferred-completion/{request_id}.
+          default: false
       required:
         - messages
         - model
@@ -260,7 +347,7 @@ components:
       properties:
         role:
           type: string
-          enum: ["system", "user", "assistant", "tool"]
+          enum: ["system", "user", "assistant", "tool", "developer"]
       required:
         - role
       discriminator:
@@ -270,6 +357,21 @@ components:
           user: '#/components/schemas/GrokUserMessage'
           assistant: '#/components/schemas/GrokAssistantMessage'
           tool: '#/components/schemas/GrokToolMessage'
+          developer: '#/components/schemas/GrokDeveloperMessage'
+
+    GrokDeveloperMessage:
+      allOf:
+        - $ref: '#/components/schemas/GrokMessage'
+        - type: object
+          description: >
+            Developer-provided instructions that the model should follow regardless of user input.
+            Similar to system messages but with stronger instruction-following guarantees.
+          properties:
+            content:
+              type: string
+              description: Developer instruction content
+          required:
+            - content
 
     GrokSystemMessage:
       allOf:
@@ -557,7 +659,7 @@ components:
         model:
           type: string
           description: The model to use for image generation
-          default: "grok-2-image-1212"
+          default: "grok-imagine-image"
       required:
         - prompt
 
@@ -656,6 +758,17 @@ components:
           type: string
           description: ID of a previous response to continue the conversation from.
           nullable: true
+        include:
+          type: array
+          items:
+            type: string
+          description: List of additional data to include in the response (e.g., "reasoning.encrypted_content", "inline_citations").
+        max_turns:
+          type: integer
+          description: Maximum number of agentic turns the model can take. Limits tool call loops.
+          nullable: true
+        response_format:
+          $ref: '#/components/schemas/GrokResponseFormat'
       required:
         - input
         - model
@@ -744,6 +857,36 @@ components:
         enable_video_understanding:
           type: boolean
           description: For x_search - enable analysis of videos in posts.
+        vector_store_ids:
+          type: array
+          items:
+            type: string
+          description: For file_search - list of collection/vector store IDs to search.
+        max_num_results:
+          type: integer
+          description: For file_search - maximum number of results to return.
+        server_url:
+          type: string
+          description: For mcp - the URL of the MCP server to connect to. Only Streaming HTTP and SSE transports are supported.
+        server_label:
+          type: string
+          description: For mcp - a label to identify the server (used for tool call prefixing).
+        server_description:
+          type: string
+          description: For mcp - a description of what the server provides.
+        allowed_tool_names:
+          type: array
+          items:
+            type: string
+          description: For mcp - list of specific tool names to allow (empty allows all).
+        authorization:
+          type: string
+          description: For mcp - a token that will be set in the Authorization header on requests to the MCP server.
+        extra_headers:
+          type: object
+          additionalProperties:
+            type: string
+          description: For mcp - additional headers to include in requests to the MCP server.
 
     GrokResponseToolType:
       type: string
@@ -753,6 +896,8 @@ components:
         - x_search
         - code_interpreter
         - function
+        - file_search
+        - mcp
 
     GrokResponseResponse:
       type: object
@@ -829,6 +974,40 @@ components:
         - output
         - status
 
+    GrokResponseFormat:
+      type: object
+      description: The format of the response output. Use for structured outputs (JSON schema enforcement).
+      properties:
+        type:
+          type: string
+          enum:
+            - json_schema
+            - text
+          description: The type of response format.
+        json_schema:
+          $ref: '#/components/schemas/GrokJsonSchemaDefinition'
+      required:
+        - type
+
+    GrokJsonSchemaDefinition:
+      type: object
+      description: A JSON Schema definition for structured output.
+      properties:
+        name:
+          type: string
+          description: A name for the schema, used for identification.
+        schema:
+          type: object
+          additionalProperties: true
+          description: The JSON Schema object defining the expected output structure.
+        strict:
+          type: boolean
+          description: Whether the model must strictly follow the schema.
+          default: true
+      required:
+        - name
+        - schema
+
     GrokResponseOutputItem:
       type: object
       description: |
@@ -842,7 +1021,7 @@ components:
       properties:
         type:
           type: string
-          enum: ["message", "reasoning", "function_call", "web_search_call", "x_search_call", "code_interpreter_call", "custom_tool_call"]
+          enum: ["message", "reasoning", "function_call", "web_search_call", "x_search_call", "code_interpreter_call", "custom_tool_call", "file_search_call", "mcp_call"]
           description: The type of output item.
         id:
           type: string
@@ -983,6 +1162,74 @@ components:
         - id
         - object
         - deleted
+
+    GrokVideoGenerationRequest:
+      type: object
+      description: Request to start a video generation.
+      properties:
+        model:
+          type: string
+          description: The model to use for video generation (e.g., "grok-imagine-video").
+          example: "grok-imagine-video"
+        prompt:
+          type: string
+          description: Text description of the video to generate.
+        image:
+          $ref: '#/components/schemas/GrokImageUrl'
+          description: Source image for image-to-video generation.
+        video_url:
+          type: string
+          description: URL of a source video for video editing. Max input video length is 8.7 seconds.
+        duration:
+          type: integer
+          description: Video duration in seconds (1-15). Not supported for video editing.
+          minimum: 1
+          maximum: 15
+        aspect_ratio:
+          type: string
+          description: "Aspect ratio of the output video. Options: 1:1, 16:9, 9:16, 4:3, 3:4, 3:2, 2:3. Default: 16:9. Not supported for video editing."
+          enum: ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
+        resolution:
+          type: string
+          description: "Resolution of the output video. Options: 480p, 720p. Default: 480p. Not supported for video editing."
+          enum: ["480p", "720p"]
+      required:
+        - model
+        - prompt
+
+    GrokVideoGenerationStartResponse:
+      type: object
+      description: Response from starting a video generation request.
+      properties:
+        request_id:
+          type: string
+          description: The request ID to use for polling the video generation result.
+      required:
+        - request_id
+
+    GrokVideoGenerationResult:
+      type: object
+      description: Result of a video generation request (returned when complete).
+      properties:
+        video:
+          $ref: '#/components/schemas/GrokVideoData'
+        model:
+          type: string
+          description: The model used for generation.
+
+    GrokVideoData:
+      type: object
+      description: Video data from a completed generation.
+      properties:
+        url:
+          type: string
+          description: Temporary URL to download the generated video. Download promptly as URLs expire.
+        duration:
+          type: integer
+          description: Duration of the generated video in seconds.
+        respect_moderation:
+          type: boolean
+          description: Whether the video passed content moderation.
 
   securitySchemes:
     ApiKeyAuth:

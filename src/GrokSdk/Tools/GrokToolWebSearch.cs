@@ -133,6 +133,21 @@ namespace GrokSdk.Tools
         private readonly string _defaultModel;
 
         /// <summary>
+        /// Options for controlling Responses API behavior (previous_response_id, max_output_tokens, etc.).
+        /// </summary>
+        public GrokResponsesToolOptions? Options { get; set; }
+
+        /// <summary>
+        /// The last response ID from the most recent API call. Can be used for conversation continuation.
+        /// </summary>
+        public string? LastResponseId { get; private set; }
+
+        /// <summary>
+        /// Tool usage events from the most recent API call.
+        /// </summary>
+        public List<GrokToolUsage> LastToolUsages { get; private set; } = new List<GrokToolUsage>();
+
+        /// <summary>
         /// Creates a new GrokToolWebSearch instance.
         /// </summary>
         /// <param name="client">The GrokClient to use for API calls.</param>
@@ -231,12 +246,16 @@ namespace GrokSdk.Tools
                 Model = _defaultModel,
                 Tools = tools,
                 Stream = false,
-                Store = false // Don't store tool-invoked searches
+                Store = Options?.Store ?? false
             };
+
+            GrokResponsesToolHelper.ApplyOptions(request, Options);
 
             try
             {
                 var response = await _client.CreateResponseAsync(request).ConfigureAwait(false);
+                LastResponseId = response.Id;
+                LastToolUsages = GrokResponsesToolHelper.ExtractToolUsages(response);
                 return ParseResponse(response);
             }
             catch (Exception ex)

@@ -1,5 +1,6 @@
 ﻿using GrokSdk;
 using GrokSdk.Tools;
+using Newtonsoft.Json;
 
 internal class Program
 {
@@ -16,14 +17,22 @@ internal class Program
         // Set initial model
         string currentModel = "grok-4-fast";
 
-        // Register some pre-made tools
+        // Register built-in tools
         thread.RegisterTool(new GrokToolImageGeneration(sdk));
         thread.RegisterTool(new GrokToolReasoning(sdk));
         thread.RegisterTool(new GrokToolWebSearch(sdk, currentModel));
         thread.RegisterTool(new GrokToolImageUnderstanding(sdk));
+        thread.RegisterTool(new GrokToolCodeExecution(sdk));
+        thread.RegisterTool(new GrokToolVideoGeneration(sdk));
+        thread.RegisterTool(new GrokToolMcp(sdk, "https://mcp.deepwiki.com/mcp", "deepwiki"));
 
         // Welcome message with instructions
-        Console.WriteLine("Welcome to the Grok Chat Console. Type your questions below. Type 'quit' to exit. Press 'm' to switch between models (grok-3 and grok-4-fast).");
+        Console.WriteLine("=== Grok Chat Console ===");
+        Console.WriteLine($"Model: {currentModel}");
+        Console.WriteLine("Commands: 'quit' to exit, 'm' to switch model");
+        Console.WriteLine("Registered tools: Image Generation, Reasoning, Web Search,");
+        Console.WriteLine("  Image Understanding, Code Execution, Video Generation, MCP (DeepWiki)");
+        Console.WriteLine();
 
         // Main interaction loop
         while (true)
@@ -42,7 +51,7 @@ internal class Program
             {
                 currentModel = currentModel == "grok-3" ? "grok-4-fast" : "grok-3";
                 Console.WriteLine($"Switched to model: {currentModel}");
-                continue; // Skip to next iteration
+                continue;
             }
 
             try
@@ -52,39 +61,77 @@ internal class Program
 
                 // Stream the response parts with colors
                 await foreach (var message in messages)
-                    if (message is GrokStreamState state)
+                {
+                    switch (message)
                     {
-                        switch (state.StreamState)
-                        {
-                            case StreamState.Thinking:
-                                Console.ForegroundColor = ConsoleColor.Yellow;
-                                Console.WriteLine("Thinking...");
-                                break;
-                            case StreamState.Streaming:
-                                Console.ForegroundColor = ConsoleColor.Cyan;
-                                Console.WriteLine("Streaming...");
-                                break;
-                            case StreamState.Done:
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine("Done processing...");
-                                break;
-                            case StreamState.Error:
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine("Error Processing...");
-                                break;
-                            case StreamState.CallingTool:
-                                Console.ForegroundColor = ConsoleColor.Magenta;
-                                Console.WriteLine("Calling Tool...");
-                                break;
-                        }
+                        case GrokStreamState state:
+                            switch (state.StreamState)
+                            {
+                                case StreamState.Thinking:
+                                    Console.ForegroundColor = ConsoleColor.Yellow;
+                                    Console.WriteLine("Thinking...");
+                                    break;
+                                case StreamState.Streaming:
+                                    Console.ForegroundColor = ConsoleColor.Cyan;
+                                    Console.WriteLine("Streaming...");
+                                    break;
+                                case StreamState.Done:
+                                    Console.ForegroundColor = ConsoleColor.Green;
+                                    Console.WriteLine("Done.");
+                                    break;
+                                case StreamState.Error:
+                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    Console.WriteLine("Error Processing...");
+                                    break;
+                                case StreamState.CallingTool:
+                                    Console.ForegroundColor = ConsoleColor.Magenta;
+                                    Console.WriteLine("Calling Tool...");
+                                    break;
+                            }
+                            Console.ResetColor();
+                            break;
 
-                        Console.ResetColor();
+                        case GrokTextMessage textMessage:
+                            Console.ForegroundColor = ConsoleColor.Blue;
+                            Console.Write(textMessage.Message);
+                            Console.ResetColor();
+                            break;
+
+                        case GrokToolResponse toolResponse:
+                            Console.ForegroundColor = ConsoleColor.Magenta;
+                            Console.WriteLine($"\n[Tool: {toolResponse.ToolName}]");
+                            // Truncate long tool output for display
+                            var toolOutput = toolResponse.ToolResponse;
+                            if (toolOutput.Length > 500)
+                                toolOutput = toolOutput[..500] + "... (truncated)";
+                            Console.WriteLine(toolOutput);
+                            Console.ResetColor();
+                            break;
+
+                        case GrokCitationMessage citationMessage:
+                            Console.ForegroundColor = ConsoleColor.DarkCyan;
+                            Console.WriteLine("\nSources:");
+                            foreach (var citation in citationMessage.Citations)
+                            {
+                                var title = citation.Title ?? citation.Url;
+                                Console.WriteLine($"  [{title}] {citation.Url}");
+                            }
+                            Console.ResetColor();
+                            break;
+
+                        case GrokServiceMessage serviceMessage:
+                            Console.ForegroundColor = ConsoleColor.DarkYellow;
+                            Console.WriteLine($"[Service] {serviceMessage.Message}");
+                            Console.ResetColor();
+                            break;
+
+                        case GrokError error:
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"[Error] {error.Exception.Message}");
+                            Console.ResetColor();
+                            break;
                     }
-                    else if (message is GrokTextMessage textMessage)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Blue;
-                        Console.Write(textMessage.Message); // Print each response chunk
-                    }
+                }
 
                 Console.ResetColor();
                 Console.WriteLine(); // Add a new line after the full response

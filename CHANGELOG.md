@@ -5,6 +5,84 @@ All notable changes to GrokSdk will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-02-16
+
+### Added
+
+- **MCP (Model Context Protocol) Support**: New `GrokToolMcp` class connects Grok to external MCP servers via the Responses API.
+  - Single or multi-server configurations via `GrokMcpServerConfig`.
+  - Supports `server_url`, `server_label`, `server_description`, `allowed_tool_names`, `authorization`, and `extra_headers`.
+  - Direct `QueryAsync()` method for programmatic use.
+  - Full `IGrokTool` integration for use with `GrokThread`.
+- **Code Execution / Code Interpreter**: New `GrokToolCodeExecution` class runs code in xAI's sandboxed environment.
+  - Mathematical calculations, data analysis, and general computation.
+  - Returns text results with code block details.
+  - Direct `QueryAsync()` method for programmatic use.
+  - Full `IGrokTool` integration for use with `GrokThread`.
+- **Video Generation**: New `GrokToolVideoGeneration` class for text-to-video, image-to-video, and video editing.
+  - Asynchronous generation with automatic polling.
+  - `StartAsync()` for manual polling, `GenerateAsync()` for automatic wait.
+  - Configurable duration (1-15s), aspect ratio, and resolution.
+  - Full `IGrokTool` integration for use with `GrokThread`.
+- **Deferred Completions**: New `GrokDeferredCompletion` class for asynchronous chat completions.
+  - `SubmitAsync()` returns a request ID for manual polling.
+  - `CreateAndWaitAsync()` submits and waits for completion.
+  - `AskDeferredAsync()` convenience method for simple prompts.
+  - Results available for 24 hours via GET polling.
+- **Structured Output Helper**: New `GrokStructuredOutput` static class for JSON schema-constrained outputs.
+  - `CreateJsonFormat<T>()` auto-generates JSON schema from C# types.
+  - `AskAsJsonAsync<T>()` sends a prompt and deserializes the response.
+  - Type-safe responses with automatic schema generation via reflection.
+- **Developer Role**: New `AddDeveloperInstruction()` on `GrokThread` for the `developer` message role.
+  - Provides instruction-level context that persists through history compression.
+  - Serializes as `developer` role in the API request (distinct from `system`).
+- **Parallel Tool Execution**: `GrokThread` now executes multiple tool calls in parallel via `Task.WhenAll`.
+  - Significant performance improvement when Grok requests multiple tools simultaneously.
+  - Results are still processed in order for deterministic behavior.
+- **Structured Output Support**: Added `response_format` to `GrokChatCompletionRequest` and `GrokResponseRequest` for JSON schema-constrained outputs via `GrokResponseFormat` and `GrokJsonSchemaDefinition`.
+- **Deferred Property**: Added `deferred` boolean to `GrokChatCompletionRequest` for deferred processing.
+- **Enhanced Responses API**: Added `include` (string[]) and `max_turns` (int?) parameters to `GrokResponseRequest`.
+- **New Tool Types**: `GrokResponseToolType` now includes `File_search` and `Mcp` in addition to existing types.
+- **File Search Properties**: `GrokResponseTool` now supports `vector_store_ids` and `max_num_results`.
+- **New output item types**: Added `file_search_call` and `mcp_call` to `GrokResponseOutputItem` type enum.
+- **Collections Search Tool**: New `GrokToolCollectionsSearch` class for file/vector store search via the Responses API.
+  - Search uploaded documents using `vector_store_ids` and `max_num_results`.
+  - Direct `QueryAsync()` method for programmatic use.
+  - Full `IGrokTool` integration for use with `GrokThread`.
+- **Responses API Streaming**: New `GrokResponsesStreamingClient` for Server-Sent Events (SSE) streaming from the Responses API.
+  - Event-based streaming via `StartStreamAsync()` with events: `OnResponseCreated`, `OnTextDelta`, `OnTextDone`, `OnResponseCompleted`, `OnStreamError`.
+  - `IAsyncEnumerable` support on .NET 8+ via `StreamAsync()`, callback pattern on netstandard2.0.
+  - Factory method: `client.GetResponsesStreamingClient()`.
+- **Streaming Tool Call Deltas**: Chat Completions streaming now supports incremental tool call accumulation.
+  - New `ToolCallDelta`, `ToolCallFunctionDelta` classes for partial tool call data.
+  - `StreamingToolCallAccumulator` accumulates argument fragments into complete `GrokToolCall` objects.
+  - `OnToolCallsReceived` event on `GrokStreamingClient` fires when tool calls are fully accumulated.
+  - `MessageDelta.ToolCalls` property for raw delta access.
+- **Citation Support**: `GrokThread` now emits `GrokCitationMessage` records when citations are present in responses.
+  - `GrokCitation` class with `Type`, `Url`, `Title`, `StartIndex`, `EndIndex` properties.
+  - `GrokCitationMessage` record containing a list of citations, yielded in the async stream.
+- **Tool Usage Tracking**: All Responses API tool wrappers now expose `LastToolUsages` for server-side tool call details.
+  - `GrokToolUsage` class captures `Type`, `Id`, `Name`, `Status`, and `Action` details.
+  - Available on `GrokToolWebSearch`, `GrokToolCodeExecution`, `GrokToolMcp`, `GrokToolCollectionsSearch`.
+- **Conversation Continuation**: All Responses API tool wrappers now support `GrokResponsesToolOptions`.
+  - `PreviousResponseId` for multi-turn conversation continuation.
+  - `MaxOutputTokens` and `MaxTurns` for controlling response limits.
+  - `Include` list for encrypted reasoning content.
+  - `Store` flag for enabling response storage.
+  - `LastResponseId` tracks the response ID from the most recent API call.
+- **Comprehensive test coverage**: New live API tests for video generation (5 tests), deferred completions (3 tests), structured output (5 tests), developer role (3 tests), MCP tool (5 tests), Code Execution tool (5 tests), plus unit tests for streaming accumulator, tool options, citations, and collections search.
+
+### Fixed
+
+- **`GrokToolImageUnderstanding` default model**: Changed from deprecated `grok-2-vision-latest` to `grok-4-1-fast-reasoning`.
+
+### Changed
+
+- **Image Generation API default model**: Changed `GrokImageGenerationRequest.Model` default from discontinued `grok-2-image-1212` to `grok-imagine-image` in OpenAPI spec and generated client.
+- Removed all remaining `grok-2-vision-latest` references from image understanding tests (replaced with `grok-4-1-fast-reasoning`).
+- Regenerated `GrokClient.cs` from updated OpenAPI spec with all new types and enum values.
+- `GrokThread.ProcessConversationAsync` now executes tool calls in parallel instead of sequentially.
+
 ## [1.4.0] - 2026-02-15
 
 ### Breaking Changes

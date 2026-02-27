@@ -719,9 +719,10 @@ public class GrokClientTests : GrokClientTestBaseClass
         Assert.IsFalse(IsValidJson(response4), "Response should not be JSON due to last Spanish instruction.");
         Assert.IsFalse(response4.Split(' ').Length == 1,
             "Response should not be one word due to last Spanish instruction.");
-        Assert.IsTrue(response4.Contains("no", StringComparison.OrdinalIgnoreCase) ||
-                      response4.Contains("s�", StringComparison.OrdinalIgnoreCase),
-            "Response should be in Spanish, likely indicating 'I don�t know' (e.g., 'No s�').");
+        // Check for common Spanish words/patterns - the model should respond in Spanish
+        var spanishIndicators = new[] { "no ", " no", "nombre", "puedo", "conozco", "tu ", " tu", "tengo", "saber" };
+        Assert.IsTrue(spanishIndicators.Any(w => response4.Contains(w, StringComparison.OrdinalIgnoreCase)),
+            $"Response should be in Spanish, likely indicating 'I don't know' (e.g., 'No sé'). Actual: {response4}");
 
         // Safety Check for Live Unit Tests to prevent API exhaustion
         await WaitForRateLimitAsync();

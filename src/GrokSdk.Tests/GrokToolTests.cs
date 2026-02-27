@@ -241,7 +241,7 @@ public class GrokToolTests : GrokClientTestBaseClass
 
 
     [DataTestMethod]
-    [DataRow("grok-2-vision-latest")]
+    [DataRow("grok-4-1-fast-reasoning")]
     [TestCategory("Live")]
     public async Task ImageUnderstandingCatImage_WhatAnimal_LowDetail(string model)
     {
@@ -266,7 +266,7 @@ public class GrokToolTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-vision-latest")]
+    [DataRow("grok-4-1-fast-reasoning")]
     [TestCategory("Live")]
     public async Task ImageUnderstandingCatImage_WhatColor_HighDetail(string model)
     {
@@ -291,7 +291,7 @@ public class GrokToolTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-vision-latest")]
+    [DataRow("grok-4-1-fast-reasoning")]
     [TestCategory("Live")]
     public async Task ImageUnderstandingDogImage_WhatAnimal_LowDetail(string model)
     {
@@ -316,7 +316,7 @@ public class GrokToolTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-vision-latest")]
+    [DataRow("grok-4-1-fast-reasoning")]
     [TestCategory("Live")]
     public async Task ImageUnderstandingDogImage_WhatBreed_HighDetail(string model)
     {
@@ -341,7 +341,7 @@ public class GrokToolTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-vision-latest")]
+    [DataRow("grok-4-1-fast-reasoning")]
     [TestCategory("Live")]
     public async Task ImageUnderstandingMissingPrompt(string model)
     {
@@ -363,7 +363,7 @@ public class GrokToolTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-vision-latest")]
+    [DataRow("grok-4-1-fast-reasoning")]
     [TestCategory("Live")]
     public async Task ImageUnderstandingMissingImageUrl(string model)
     {
@@ -385,7 +385,7 @@ public class GrokToolTests : GrokClientTestBaseClass
     }
 
     [DataTestMethod]
-    [DataRow("grok-2-vision-latest")]
+    [DataRow("grok-4-1-fast-reasoning")]
     [TestCategory("Live")]
     public async Task ImageUnderstandingInvalidImageDetail(string model)
     {

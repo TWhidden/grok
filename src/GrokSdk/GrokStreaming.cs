@@ -1,4 +1,6 @@
-﻿using System.Diagnostics;
+﻿using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Text;
 using Newtonsoft.Json;
 
@@ -44,6 +46,11 @@ public class GrokStreamingClient
     /// Event indicating the current stream state
     /// </summary>
     public event EventHandler<StreamState>? OnStateChanged;
+    /// <summary>
+    /// Event indicating complete tool calls have been accumulated from the stream.
+    /// Fired when <c>finish_reason</c> is "tool_calls" and all deltas have been collected.
+    /// </summary>
+    public event EventHandler<List<GrokToolCall>>? OnToolCallsReceived;
 
     /// <summary>
     ///     Starts streaming a chat completion response from the Grok API.
@@ -108,6 +115,8 @@ public class GrokStreamingClient
 #endif
         using var reader = new StreamReader(stream);
 
+        var toolCallAccumulator = new StreamingToolCallAccumulator();
+
         while (!reader.EndOfStream)
         {
 #if NETSTANDARD2_0
@@ -127,11 +136,40 @@ public class GrokStreamingClient
             if (line.StartsWith("data: "))
             {
                 var json = line.Substring(6); // Remove "data: " prefix
-                if (json == "[DONE]") break; // End of stream
+                if (json == "[DONE]")
+                {
+                    // If we accumulated tool calls, emit them before finishing
+                    if (toolCallAccumulator.HasToolCalls)
+                    {
+                        OnToolCallsReceived?.Invoke(this, toolCallAccumulator.GetToolCalls());
+                    }
+                    break;
+                }
 
                 try
                 {
                     var chunk = JsonConvert.DeserializeObject<ChatCompletionChunk>(json)!;
+
+                    // Accumulate tool call deltas if present
+                    if (chunk.Choices?.Count > 0)
+                    {
+                        var choice = chunk.Choices[0];
+                        if (choice.Delta?.ToolCalls != null)
+                        {
+                            foreach (var toolCallDelta in choice.Delta.ToolCalls)
+                            {
+                                toolCallAccumulator.AddDelta(toolCallDelta);
+                            }
+                            UpdateState(StreamState.CallingTool);
+                        }
+
+                        // Check if tool calls are complete
+                        if (choice.FinishReason == "tool_calls" && toolCallAccumulator.HasToolCalls)
+                        {
+                            OnToolCallsReceived?.Invoke(this, toolCallAccumulator.GetToolCalls());
+                            toolCallAccumulator.Reset();
+                        }
+                    }
 
                     UpdateState(StreamState.Streaming);
                     OnChunkReceived?.Invoke(this, chunk);
@@ -248,6 +286,136 @@ public class MessageDelta
     /// </summary>
     [JsonProperty("content", Required = Required.DisallowNull, NullValueHandling = NullValueHandling.Ignore)]
     public string? Content { get; set; }
+
+    /// <summary>
+    ///     Partial tool call data (optional). Present when the model is requesting tool calls.
+    /// </summary>
+    [JsonProperty("tool_calls", Required = Required.Default, NullValueHandling = NullValueHandling.Ignore)]
+    public List<ToolCallDelta>? ToolCalls { get; set; }
+}
+
+/// <summary>
+/// Represents a partial tool call in a streaming delta.
+/// Tool call arguments arrive incrementally across multiple chunks.
+/// </summary>
+public class ToolCallDelta
+{
+    /// <summary>
+    /// Index of this tool call in the tool_calls array.
+    /// </summary>
+    [JsonProperty("index")]
+    public int Index { get; set; }
+
+    /// <summary>
+    /// Tool call ID (only present in the first chunk for this tool call).
+    /// </summary>
+    [JsonProperty("id", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Id { get; set; }
+
+    /// <summary>
+    /// The type of tool call (e.g., "function"). Only present in the first chunk.
+    /// </summary>
+    [JsonProperty("type", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Type { get; set; }
+
+    /// <summary>
+    /// Partial function call data.
+    /// </summary>
+    [JsonProperty("function", NullValueHandling = NullValueHandling.Ignore)]
+    public ToolCallFunctionDelta? Function { get; set; }
+}
+
+/// <summary>
+/// Partial function data within a streaming tool call delta.
+/// </summary>
+public class ToolCallFunctionDelta
+{
+    /// <summary>
+    /// Function name (only present in the first chunk).
+    /// </summary>
+    [JsonProperty("name", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Name { get; set; }
+
+    /// <summary>
+    /// Partial arguments fragment. Accumulated across chunks to form complete JSON arguments.
+    /// </summary>
+    [JsonProperty("arguments", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Arguments { get; set; }
+}
+
+/// <summary>
+/// Accumulates tool call deltas from streaming chunks into complete tool calls.
+/// </summary>
+public class StreamingToolCallAccumulator
+{
+    private readonly Dictionary<int, AccumulatedToolCall> _toolCalls = new();
+
+    /// <summary>
+    /// Process a tool call delta from a streaming chunk.
+    /// </summary>
+    /// <param name="delta">The tool call delta to accumulate.</param>
+    public void AddDelta(ToolCallDelta delta)
+    {
+        if (!_toolCalls.TryGetValue(delta.Index, out var accumulated))
+        {
+            accumulated = new AccumulatedToolCall();
+            _toolCalls[delta.Index] = accumulated;
+        }
+
+        if (delta.Id != null)
+            accumulated.Id = delta.Id;
+
+        if (delta.Type != null)
+            accumulated.Type = delta.Type;
+
+        if (delta.Function?.Name != null)
+            accumulated.FunctionName = delta.Function.Name;
+
+        if (delta.Function?.Arguments != null)
+            accumulated.ArgumentsBuilder.Append(delta.Function.Arguments);
+    }
+
+    /// <summary>
+    /// Gets the complete accumulated tool calls.
+    /// </summary>
+    /// <returns>List of complete tool calls with accumulated arguments.</returns>
+    public List<GrokToolCall> GetToolCalls()
+    {
+        var result = new List<GrokToolCall>();
+        foreach (var kvp in _toolCalls.OrderBy(k => k.Key))
+        {
+            var acc = kvp.Value;
+            result.Add(new GrokToolCall
+            {
+                Id = acc.Id ?? string.Empty,
+                Type = GrokToolCallType.Function,
+                Function = new Function
+                {
+                    Name = acc.FunctionName ?? string.Empty,
+                    Arguments = acc.ArgumentsBuilder.ToString()
+                }
+            });
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Whether any tool calls have been accumulated.
+    /// </summary>
+    public bool HasToolCalls => _toolCalls.Count > 0;
+
+    /// <summary>
+    /// Resets the accumulator for a new response.
+    /// </summary>
+    public void Reset() => _toolCalls.Clear();
+
+    private class AccumulatedToolCall
+    {
+        public string? Id;
+        public string? Type;
+        public string? FunctionName;
+        public readonly System.Text.StringBuilder ArgumentsBuilder = new();
+    }
 }
 
 public class StreamCompletedEventArgs(TimeSpan duration) : EventArgs

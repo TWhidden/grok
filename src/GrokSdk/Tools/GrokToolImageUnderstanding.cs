@@ -79,9 +79,9 @@ namespace GrokSdk.Tools
         /// Initializes a new instance of the image understanding tool.
         /// </summary>
         /// <param name="client">The GrokClient instance for API calls.</param>
-        /// <param name="model">The model to use for image understanding (e.g., "grok-3-latest").</param>
+        /// <param name="model">The model to use for image understanding. Grok 4+ models support multimodal input natively.</param>
         /// <exception cref="ArgumentNullException">Thrown if client is null.</exception>
-        public GrokToolImageUnderstanding(GrokClient client, string model = "grok-2-vision-latest")
+        public GrokToolImageUnderstanding(GrokClient client, string model = "grok-4-1-fast-reasoning")
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
             _model = model;

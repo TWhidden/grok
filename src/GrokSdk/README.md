@@ -24,117 +24,144 @@ Dependencies:
 
 ## Core Feature: GrokThread
 
-`GrokThread` powers this library, enabling multi-turn conversations, tool execution, and asynchronous streaming. Below is a console chat example featuring an image generation tool:
+`GrokThread` powers this library, enabling multi-turn conversations, tool execution, and asynchronous streaming. The `GrokSdk.ConsoleDemo` project is a working console app you can run immediately — it registers all built-in tools and handles every message type:
 
 ```csharp
 using GrokSdk;
-
-namespace GrokConsoleTest;
+using GrokSdk.Tools;
+using Newtonsoft.Json;
 
 internal class Program
 {
     private static async Task Main(string[] args)
     {
-        // Initialize HTTP client and GrokClient
+        // Initialize the HTTP client and GrokClient
+        string apiKey = GetApiKey();
         var httpClient = new HttpClient();
-        var sdk = new GrokClient(httpClient, "your-api-key-here"); // Replace with your API key
+        var sdk = new GrokClient(httpClient, apiKey);
 
-        // Create GrokThread to manage the conversation
+        // Create a GrokThread instance to manage the conversation
         var thread = new GrokThread(sdk);
 
-        // Define Grok's behavior with system instructions
-        thread.AddSystemInstruction("This is a console chat bot for testing communications with Grok");
+        // Set initial model
+        string currentModel = "grok-4-fast";
 
-        // Show welcome message
-        Console.WriteLine("Welcome to the Grok Chat Console. Type your questions below. Type 'quit' to exit.");
+        // Register built-in tools
+        thread.RegisterTool(new GrokToolImageGeneration(sdk));
+        thread.RegisterTool(new GrokToolReasoning(sdk));
+        thread.RegisterTool(new GrokToolWebSearch(sdk, currentModel));
+        thread.RegisterTool(new GrokToolImageUnderstanding(sdk));
+        thread.RegisterTool(new GrokToolCodeExecution(sdk));
+        thread.RegisterTool(new GrokToolVideoGeneration(sdk));
+        thread.RegisterTool(new GrokToolMcp(sdk, "https://mcp.deepwiki.com/mcp", "deepwiki"));
 
-        // Register your own tool (Generic)
-        thread.RegisterTool(new GrokToolDefinition(
-            "Tool Name",
-            "Tool Instruction",
-            "Tool Arguments",
-            <ToolExecutionFunctionCallback()>));
-        
-        // Built in Grok Image Generation Tool
-        thread.RegisterTool(new GrokToolImageGeneration(sdk))
-
-        // Built in Grok Reasoning Tool
-        thread.RegisterTool(new GrokToolReasoning(sdk))
-
-        // Preload context with neutral discussion (non-API processed)
-        thread.AddUserMessage("Alex Said: I tried a new coffee shop today.");
-        thread.AddUserMessage("Sam Said: Nice! How was the coffee?");
-        thread.AddUserMessage("Alex Said: Really good, I might go back tomorrow.");
-        await thread.CompressHistoryAsync(); // Compress history to save tokens
+        // Welcome message with instructions
+        Console.WriteLine("=== Grok Chat Console ===");
+        Console.WriteLine($"Model: {currentModel}");
+        Console.WriteLine("Commands: 'quit' to exit, 'm' to switch model");
+        Console.WriteLine("Registered tools: Image Generation, Reasoning, Web Search,");
+        Console.WriteLine("  Image Understanding, Code Execution, Video Generation, MCP (DeepWiki)");
+        Console.WriteLine();
 
         // Main interaction loop
         while (true)
         {
-            // Prompt user with green text
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write("You: ");
             Console.ResetColor();
             var input = Console.ReadLine();
 
-            // Exit on 'quit' or empty input
             if (string.IsNullOrWhiteSpace(input) || input.ToLower() == "quit") break;
+
+            if (input.Trim().ToLower() == "m")
+            {
+                currentModel = currentModel == "grok-3" ? "grok-4-fast" : "grok-3";
+                Console.WriteLine($"Switched to model: {currentModel}");
+                continue;
+            }
 
             try
             {
-                // Stream responses for the user's question
-                var messages = thread.AskQuestion(input);
+                var messages = thread.AskQuestion(input, model: currentModel);
+
                 await foreach (var message in messages)
                 {
-                    if (message is GrokStreamState state)
+                    switch (message)
                     {
-                        // Display state updates with colors
-                        switch (state.StreamState)
-                        {
-                            case StreamState.Thinking:
-                                Console.ForegroundColor = ConsoleColor.Yellow;
-                                Console.WriteLine("Thinking...");
-                                break;
-                            case StreamState.Streaming:
-                                Console.ForegroundColor = ConsoleColor.Cyan;
-                                Console.WriteLine("Streaming...");
-                                break;
-                            case StreamState.Done:
-                                Console.ForegroundColor = ConsoleColor.Green;
-                                Console.WriteLine("Done processing...");
-                                break;
-                            case StreamState.Error:
-                                Console.ForegroundColor = ConsoleColor.Red;
-                                Console.WriteLine("Error Processing...");
-                                break;
-                            case StreamState.CallingTool:
-                                Console.ForegroundColor = ConsoleColor.Magenta;
-                                Console.WriteLine("Calling Tool...");
-                                break;                                
-                        }
-                        Console.ResetColor();
-                    }
-                    else if (message is GrokTextMessage textMessage)
-                    {
-                        // Stream text responses in blue
-                        Console.ForegroundColor = ConsoleColor.Blue;
-                        Console.Write(textMessage.Message);
-                    }
-                    else if (message is GrokToolResponse toolResponse)
-                    {
-                        // Handle tool output (e.g., image URL)
-                        if (toolResponse.ToolName == ImageGeneratorHelper.GrokToolName)
-                        {
+                        case GrokStreamState state:
+                            switch (state.StreamState)
+                            {
+                                case StreamState.Thinking:
+                                    Console.ForegroundColor = ConsoleColor.Yellow;
+                                    Console.WriteLine("Thinking...");
+                                    break;
+                                case StreamState.Streaming:
+                                    Console.ForegroundColor = ConsoleColor.Cyan;
+                                    Console.WriteLine("Streaming...");
+                                    break;
+                                case StreamState.Done:
+                                    Console.ForegroundColor = ConsoleColor.Green;
+                                    Console.WriteLine("Done.");
+                                    break;
+                                case StreamState.Error:
+                                    Console.ForegroundColor = ConsoleColor.Red;
+                                    Console.WriteLine("Error Processing...");
+                                    break;
+                                case StreamState.CallingTool:
+                                    Console.ForegroundColor = ConsoleColor.Magenta;
+                                    Console.WriteLine("Calling Tool...");
+                                    break;
+                            }
+                            Console.ResetColor();
+                            break;
+
+                        case GrokTextMessage textMessage:
+                            Console.ForegroundColor = ConsoleColor.Blue;
+                            Console.Write(textMessage.Message);
+                            Console.ResetColor();
+                            break;
+
+                        case GrokToolResponse toolResponse:
                             Console.ForegroundColor = ConsoleColor.Magenta;
-                            Console.WriteLine($"Image URL: {toolResponse.ToolResponse}");
-                        }
+                            Console.WriteLine($"\n[Tool: {toolResponse.ToolName}]");
+                            // Truncate long tool output for display
+                            var toolOutput = toolResponse.ToolResponse;
+                            if (toolOutput.Length > 500)
+                                toolOutput = toolOutput[..500] + "... (truncated)";
+                            Console.WriteLine(toolOutput);
+                            Console.ResetColor();
+                            break;
+
+                        case GrokCitationMessage citationMessage:
+                            Console.ForegroundColor = ConsoleColor.DarkCyan;
+                            Console.WriteLine("\nSources:");
+                            foreach (var citation in citationMessage.Citations)
+                            {
+                                var title = citation.Title ?? citation.Url;
+                                Console.WriteLine($"  [{title}] {citation.Url}");
+                            }
+                            Console.ResetColor();
+                            break;
+
+                        case GrokServiceMessage serviceMessage:
+                            Console.ForegroundColor = ConsoleColor.DarkYellow;
+                            Console.WriteLine($"[Service] {serviceMessage.Message}");
+                            Console.ResetColor();
+                            break;
+
+                        case GrokError error:
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine($"[Error] {error.Exception.Message}");
+                            Console.ResetColor();
+                            break;
                     }
                 }
+
                 Console.ResetColor();
-                Console.WriteLine(); // New line after response
+                Console.WriteLine();
             }
             catch (Exception ex)
             {
-                // Display errors in red
                 Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine($"Error: {ex.Message}");
                 Console.ResetColor();
@@ -143,73 +170,62 @@ internal class Program
 
         Console.WriteLine("Goodbye!");
     }
-}
 
-// Image generation tool helper
-internal static class ImageGeneratorHelper
-{
-    private static readonly HttpClient httpClient = new();
-
-    public static string GrokToolName = "image_generation";
-
-    public static object GrokArgsRequest = new
+    private static string GetApiKey()
     {
-        type = "object",
-        properties = new
+        string filePath = Path.Combine(Directory.GetCurrentDirectory(), ".xai_key");
+        if (File.Exists(filePath))
         {
-            imageDescription = new
+            string key = File.ReadAllText(filePath).Trim();
+            if (!string.IsNullOrEmpty(key))
             {
-                type = "string",
-                description = "The image description that will be used to generate an image"
+                return key;
             }
-        },
-        required = new[] { "imageDescription" }
-    };
+        }
 
-    /// <summary>
-    /// Processes Grok's tool request and generates an image URL.
-    /// </summary>
-    public static async Task<string> ProcessGrokRequestForImage(string serializedRequest)
-    {
-        var args = JsonConvert.DeserializeObject<Dictionary<string, string>>(serializedRequest) ??
-                   throw new Exception("Could not process arguments from function");
-        var description = args["imageDescription"];
-        return await GenerateImageUrlAsync(description);
-    }
+        Console.WriteLine("Please enter your xAI API key:");
+        string enteredKey = Console.ReadLine()?.Trim() ?? throw new Exception("Failed to get Console ReadLine");
+        while (string.IsNullOrEmpty(enteredKey))
+        {
+            Console.WriteLine("API key cannot be empty. Please enter a valid key:");
+            enteredKey = Console.ReadLine()?.Trim() ?? throw new Exception("Failed to get Console ReadLine");
+        }
 
-    /// <summary>
-    /// Generates an image URL by sending a description to an external service.
-    /// </summary>
-    private static async Task<string> GenerateImageUrlAsync(string generationText)
-    {
-        if (generationText == null) throw new ArgumentNullException(nameof(generationText));
-
-        var url = "your-webhook-url-here"; // Replace with your webhook URL
-        var json = JsonSerializer.Serialize(new { ImageDescription = generationText });
-        var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-        var response = await httpClient.PostAsync(url, content);
-        if (!response.IsSuccessStatusCode)
-            throw new Exception($"POST request failed with status code {response.StatusCode}");
-
-        var responseString = await response.Content.ReadAsStringAsync();
-        var jsonResponse = JsonSerializer.Deserialize<Dictionary<string, string>>(responseString);
-        if (!jsonResponse.TryGetValue("image_url", out var imageUrl))
-            throw new Exception("Image URL not found in response");
-
-        return imageUrl;
+        File.WriteAllText(filePath, enteredKey);
+        return enteredKey;
     }
 }
 ```
 
 ### Key Features of GrokThread
-- **Conversation Management**: Tracks history for context-aware responses.
-- **Tool Integration**: Executes custom tools like image generation (see above).
-- **Streaming**: Provides real-time updates via `IAsyncEnumerable`.
+- **Conversation Management**: Tracks message history for context-aware multi-turn responses.
+- **Built-in Tools**: Seven built-in tools registered in the console demo: image generation, reasoning, web search, image understanding, code execution, video generation, and MCP.
+- **Custom Tools**: Register your own tools via `GrokToolDefinition` (see below).
+- **Streaming**: Real-time response streaming via `IAsyncEnumerable<GrokMessageBase>`.
+- **Message Types**: Stream yields typed messages — `GrokTextMessage`, `GrokStreamState`, `GrokToolResponse`, `GrokCitationMessage`, `GrokServiceMessage`, `GrokError`.
 - **Compression**: Shrinks history with `CompressHistoryAsync` to optimize tokens.
-- **State Tracking**: Monitors states (`Thinking`, `Streaming`, etc.) for feedback.
+- **State Tracking**: Monitors states (`Thinking`, `Streaming`, `CallingTool`, `Done`, `Error`).
+- **Developer Role**: Use `AddDeveloperInstruction()` for the `developer` message role (stronger instruction-following).
+- **Parallel Tool Execution**: Multiple tool calls execute in parallel via `Task.WhenAll`.
+- **Citation Surfacing**: `GrokCitationMessage` records emitted when citations are present in responses.
 
-## New Built-in Tools
+### Custom Tool Registration
+You can register your own tools using `GrokToolDefinition`:
+
+```csharp
+thread.RegisterTool(new GrokToolDefinition(
+    "weather_lookup",
+    "Look up current weather for a given city",
+    new { type = "object", properties = new { city = new { type = "string" } }, required = new[] { "city" } },
+    async (args) =>
+    {
+        // Parse args JSON and return result
+        var parsed = JsonConvert.DeserializeObject<Dictionary<string, string>>(args);
+        return $"{{\"temp\": \"72F\", \"city\": \"{parsed!["city"]}\"}}";
+    }));
+```
+
+## Built-in Tools
 
 ### Image Generation Tool
 The `GrokToolImageGeneration` tool allows Grok to generate images based on a text prompt. Users can specify the number of images and the response format (`url` or `base64`).
@@ -288,7 +304,7 @@ var client = new GrokClient(httpClient, "your-api-key-here");
 // Web search with the Responses API
 var request = new GrokResponseRequest
 {
-    Input = new Collection<GrokResponseInputMessage>
+    Input = new List<GrokResponseInputMessage>
     {
         new GrokResponseInputMessage 
         { 
@@ -297,7 +313,7 @@ var request = new GrokResponseRequest
         }
     },
     Model = "grok-4-fast",
-    Tools = new Collection<GrokResponseTool>
+    Tools = new List<GrokResponseTool>
     {
         new GrokResponseTool { Type = GrokResponseToolType.Web_search }
     }
@@ -332,6 +348,341 @@ foreach (var item in response.Output)
 | `x_search` | Search X/Twitter posts with handle and date filtering |
 | `code_interpreter` | Execute code on xAI servers |
 | `function` | Custom function calling (same concept as chat completions) |
+| `file_search` | Search uploaded files with vector store IDs |
+| `mcp` | Connect to external MCP (Model Context Protocol) servers |
+
+### MCP Tool (Model Context Protocol)
+The `GrokToolMcp` tool connects Grok to external MCP servers, extending its capabilities with custom third-party tools. xAI manages the MCP server connection on your behalf via the Responses API.
+
+#### Usage Example
+```csharp
+var thread = new GrokThread(client);
+// Connect to a public MCP server (e.g., DeepWiki for GitHub repo docs)
+thread.RegisterTool(new GrokToolMcp(client, "https://mcp.deepwiki.com/mcp", "deepwiki"));
+thread.AddSystemInstruction("You can search GitHub repository documentation using the MCP tool.");
+
+await foreach (var message in thread.AskQuestion("What is the microsoft/TypeScript project about?"))
+{
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == GrokToolMcp.ToolName)
+    {
+        Console.WriteLine($"MCP Result: {toolResponse.ToolResponse}");
+    }
+}
+```
+
+**Multi-server configuration:**
+```csharp
+var servers = new List<GrokMcpServerConfig>
+{
+    new GrokMcpServerConfig
+    {
+        ServerUrl = "https://mcp.deepwiki.com/mcp",
+        ServerLabel = "deepwiki",
+        ServerDescription = "Search GitHub repository documentation"
+    },
+    new GrokMcpServerConfig
+    {
+        ServerUrl = "https://your-private-mcp-server.com/mcp",
+        ServerLabel = "internal",
+        Authorization = "Bearer your-token-here",
+        AllowedToolNames = new List<string> { "search", "lookup" }
+    }
+};
+var tool = new GrokToolMcp(client, servers);
+```
+
+**Direct programmatic usage:**
+```csharp
+var tool = new GrokToolMcp(client, "https://mcp.deepwiki.com/mcp", "deepwiki");
+var response = await tool.QueryAsync("What does the dotnet/runtime repository do?");
+Console.WriteLine(response.Text);
+```
+
+**Parameters:**
+- `server_url`: The URL of the MCP server (required). Only Streaming HTTP and SSE transports are supported.
+- `server_label`: A label to identify the server.
+- `server_description`: A description of what the server provides.
+- `allowed_tool_names`: List of specific tool names to allow (empty allows all).
+- `authorization`: Token for the Authorization header on requests to the MCP server.
+- `extra_headers`: Additional headers to include in MCP server requests.
+
+### Code Execution Tool (Code Interpreter)
+The `GrokToolCodeExecution` tool runs code in xAI's sandboxed environment via the Responses API. Useful for mathematical calculations, data analysis, and general computation.
+
+#### Usage Example
+```csharp
+var thread = new GrokThread(client);
+thread.RegisterTool(new GrokToolCodeExecution(client));
+thread.AddSystemInstruction("You can execute code for calculations and data analysis.");
+
+await foreach (var message in thread.AskQuestion("Calculate the factorial of 20"))
+{
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == GrokToolCodeExecution.ToolName)
+    {
+        Console.WriteLine($"Result: {toolResponse.ToolResponse}");
+    }
+}
+```
+
+**Direct programmatic usage:**
+```csharp
+var tool = new GrokToolCodeExecution(client);
+var response = await tool.QueryAsync("What is 2 to the power of 100?");
+Console.WriteLine(response.Text);
+```
+
+### Collections Search Tool (File Search)
+The `GrokToolCollectionsSearch` tool searches uploaded documents in xAI vector stores using the Responses API's `file_search` tool. You must have vector store IDs from the xAI console.
+
+#### Usage Example
+```csharp
+var thread = new GrokThread(client);
+thread.RegisterTool(new GrokToolCollectionsSearch(client, "vs_abc123"));
+thread.AddSystemInstruction("You can search uploaded documents to answer questions.");
+
+await foreach (var message in thread.AskQuestion("What does the Q3 report say about revenue?"))
+{
+    if (message is GrokToolResponse toolResponse)
+        Console.WriteLine($"Result: {toolResponse.ToolResponse}");
+}
+```
+
+**Direct programmatic usage:**
+```csharp
+var tool = new GrokToolCollectionsSearch(client, new List<string> { "vs_abc123", "vs_def456" }, maxNumResults: 10);
+var response = await tool.QueryAsync("Find all references to machine learning");
+Console.WriteLine(response.Text);
+foreach (var citation in response.Citations)
+    Console.WriteLine($"  Source: {citation.Url} - {citation.Title}");
+```
+
+### Responses API Tool Options
+All Responses API tool wrappers (`GrokToolWebSearch`, `GrokToolCodeExecution`, `GrokToolMcp`, `GrokToolCollectionsSearch`) support `GrokResponsesToolOptions` for advanced control:
+
+```csharp
+var tool = new GrokToolWebSearch(client);
+
+// Set options before querying
+tool.Options = new GrokResponsesToolOptions
+{
+    Store = true,                // Enable response storage for continuation
+    MaxOutputTokens = 1000,      // Limit output tokens
+    MaxTurns = 5,                // Limit agentic turns
+    Include = new List<string> { "reasoning.encrypted_content" }
+};
+
+// After execution, access tracking data
+var argsJson = JsonConvert.SerializeObject(new { query = "Latest AI news" });
+await tool.ExecuteAsync(argsJson);
+Console.WriteLine($"Response ID: {tool.LastResponseId}");
+
+// Continue the conversation using previous response ID
+tool.Options = new GrokResponsesToolOptions
+{
+    Store = true,
+    PreviousResponseId = tool.LastResponseId
+};
+await tool.ExecuteAsync(JsonConvert.SerializeObject(new { query = "Tell me more about the first result" }));
+```
+
+### Tool Usage Tracking
+After each API call, Responses API tool wrappers populate `LastToolUsages` with details about server-side tool calls:
+
+```csharp
+var tool = new GrokToolWebSearch(client);
+var argsJson = JsonConvert.SerializeObject(new { query = "weather today" });
+await tool.ExecuteAsync(argsJson);
+
+foreach (var usage in tool.LastToolUsages)
+{
+    Console.WriteLine($"Tool: {usage.Type}, Status: {usage.Status}");
+    if (usage.Action != null)
+        Console.WriteLine($"  Action: {JsonConvert.SerializeObject(usage.Action)}");
+}
+```
+
+### Citation Support in GrokThread
+When the API returns citations (e.g., from web search), `GrokThread` emits `GrokCitationMessage` records in the async stream:
+
+```csharp
+await foreach (var message in thread.AskQuestion("What's the latest news about SpaceX?"))
+{
+    if (message is GrokTextMessage text)
+        Console.Write(text.Message);
+    else if (message is GrokCitationMessage citations)
+    {
+        Console.WriteLine("\nSources:");
+        foreach (var citation in citations.Citations)
+            Console.WriteLine($"  [{citation.Title}] {citation.Url}");
+    }
+}
+```
+
+### Responses API Streaming
+The `GrokResponsesStreamingClient` provides real-time streaming from the Responses API using Server-Sent Events (SSE):
+
+#### Event-based streaming
+```csharp
+var streamingClient = client.GetResponsesStreamingClient();
+streamingClient.OnTextDelta += (s, delta) => Console.Write(delta.Delta);
+streamingClient.OnTextDone += (s, fullText) => Console.WriteLine($"\n\nFull text: {fullText}");
+streamingClient.OnResponseCompleted += (s, response) => Console.WriteLine($"Done! ID: {response.Id}");
+
+var request = new GrokResponseRequest
+{
+    Input = new List<GrokResponseInputMessage>
+    {
+        new GrokResponseInputMessage { Role = GrokResponseInputMessageRole.User, Content = "Tell me a story" }
+    },
+    Model = "grok-4-fast",
+    Tools = new List<GrokResponseTool> { new GrokResponseTool { Type = GrokResponseToolType.Web_search } }
+};
+
+await streamingClient.StartStreamAsync(request);
+```
+
+#### IAsyncEnumerable streaming (.NET 8+)
+```csharp
+var streamingClient = client.GetResponsesStreamingClient();
+var request = new GrokResponseRequest { /* ... */ };
+
+await foreach (var evt in streamingClient.StreamAsync(request))
+{
+    if (evt.EventType == "response.output_text.delta")
+        Console.Write(evt.ParsedData?["delta"]?.ToString());
+}
+```
+
+### Streaming Tool Call Deltas (Chat Completions)
+The `GrokStreamingClient` now accumulates streaming tool calls and fires `OnToolCallsReceived` when all deltas are collected:
+
+```csharp
+var streamingClient = client.GetStreamingClient();
+
+streamingClient.OnToolCallsReceived += (s, toolCalls) =>
+{
+    foreach (var call in toolCalls)
+        Console.WriteLine($"Tool call: {call.Function.Name}({call.Function.Arguments})");
+};
+
+streamingClient.OnChunkReceived += (s, chunk) =>
+{
+    if (chunk.Choices[0].Delta.Content != null)
+        Console.Write(chunk.Choices[0].Delta.Content);
+};
+
+await streamingClient.StartStreamAsync(request, CancellationToken.None);
+```
+
+You can also use the `StreamingToolCallAccumulator` directly for manual accumulation:
+```csharp
+var accumulator = new StreamingToolCallAccumulator();
+streamingClient.OnChunkReceived += (s, chunk) =>
+{
+    var toolCallDeltas = chunk.Choices[0].Delta.ToolCalls;
+    if (toolCallDeltas != null)
+        foreach (var delta in toolCallDeltas)
+            accumulator.AddDelta(delta);
+};
+// After streaming completes:
+var completedCalls = accumulator.GetToolCalls();
+```
+
+### Video Generation Tool
+The `GrokToolVideoGeneration` tool generates videos from text prompts, animates images, or edits existing videos using xAI's video generation model (`grok-imagine-video`). Video generation is asynchronous — the tool submits a request and polls for results.
+
+#### Usage Example
+```csharp
+var thread = new GrokThread(client);
+thread.RegisterTool(new GrokToolVideoGeneration(client));
+thread.AddSystemInstruction("You can generate videos from text descriptions.");
+
+await foreach (var message in thread.AskQuestion("Generate a video of a cat playing with a ball"))
+{
+    if (message is GrokToolResponse toolResponse && toolResponse.ToolName == GrokToolVideoGeneration.ToolName)
+    {
+        Console.WriteLine($"Video: {toolResponse.ToolResponse}");
+    }
+}
+```
+
+**Direct programmatic usage:**
+```csharp
+var tool = new GrokToolVideoGeneration(client);
+
+// Generate and wait for completion (polls automatically)
+var result = await tool.GenerateAsync(new GrokToolVideoGenerationArgs 
+{ 
+    Prompt = "A peaceful ocean wave", 
+    Duration = 5 
+});
+Console.WriteLine($"Video URL: {result.Url}");
+
+// Or start and poll manually
+var requestId = await tool.StartAsync(new GrokToolVideoGenerationArgs { Prompt = "A sunset" });
+var status = await tool.GetStatusAsync(requestId);
+```
+
+**Parameters:**
+- `prompt`: Text description of the video to generate (required).
+- `image_url`: URL or base64 data URI of a source image for image-to-video.
+- `video_url`: URL of a source video for video editing (max 8.7s).
+- `duration`: Video duration in seconds (1-15). Default: 5.
+- `aspect_ratio`: `"1:1"`, `"16:9"`, `"9:16"`, `"4:3"`, `"3:4"`, `"3:2"`, `"2:3"`. Default: `"16:9"`.
+- `resolution`: `"480p"` or `"720p"`. Default: `"480p"`.
+
+### Deferred Completions
+The `GrokDeferredCompletion` helper enables asynchronous chat completions — submit a request and retrieve the result later. Useful for long-running or non-urgent tasks. Results are available for 24 hours.
+
+#### Usage Example
+```csharp
+var deferred = new GrokDeferredCompletion(client);
+
+// Simple: ask a question and wait for the result
+string? answer = await deferred.AskDeferredAsync("What is the meaning of life?");
+Console.WriteLine(answer);
+
+// Advanced: submit and poll manually
+var requestId = await deferred.SubmitAsync(new GrokChatCompletionRequest
+{
+    Messages = new List<GrokMessage>
+    {
+        new GrokUserMessage 
+        { 
+            Content = new Collection<GrokContent> 
+            { 
+                new GrokTextPart { Text = "Explain quantum computing" } 
+            } 
+        }
+    },
+    Model = "grok-3-mini-fast"
+});
+
+// Poll later
+var result = await deferred.TryGetResultAsync(requestId);
+if (result != null)
+    Console.WriteLine(result.Choices[0].Message.Content);
+```
+
+### Structured Output
+The `GrokStructuredOutput` helper constrains Grok's response to match a JSON schema, enabling type-safe responses.
+
+#### Usage Example
+```csharp
+// Define a response type
+public record WeatherInfo(string City, double Temperature, string Condition);
+
+// Ask and get a typed response
+var weather = await GrokStructuredOutput.AskAsJsonAsync<WeatherInfo>(
+    client,
+    "What's the weather in Tokyo?",
+    model: "grok-3-mini-fast"
+);
+Console.WriteLine($"{weather.City}: {weather.Temperature}°, {weather.Condition}");
+
+// Or manually create a response format for use with GrokThread
+var format = GrokStructuredOutput.CreateJsonFormat<WeatherInfo>();
+```
 
 ---
 
@@ -370,14 +721,22 @@ var thread = new GrokThread(new GrokClient(new HttpClient(), "your-api-key-here"
 thread.AddSystemInstruction("You are a helpful assistant.");
 await foreach (var response in thread.AskQuestion("Hello!"))
 {
-    if (response is GrokTextMessage text) Console.WriteLine(text.Message);
+    if (response is GrokTextMessage text) Console.Write(text.Message);
 }
 ```
 
-### Tool Example: Image Generation
-The `ImageGeneratorHelper` above shows how to integrate a tool that generates images:
-- Ask: "Generate an image of a sunset."
-- Grok calls `image_generation`, which returns a URL from your webhook.
+### Running the Console Demo
+The `GrokSdk.ConsoleDemo` project is a ready-to-run example with all tools registered:
+```bash
+cd src/GrokSdk.ConsoleDemo
+dotnet run
+```
+It will prompt for your xAI API key on first run (saved to `.xai_key`). Try these sample prompts:
+- "Generate an image of a sunset over mountains" (Image Generation)
+- "Search the web for the latest AI news" (Web Search)
+- "Calculate the first 50 Fibonacci numbers" (Code Execution)
+- "What is the microsoft/TypeScript project about?" (MCP / DeepWiki)
+- "Explain the P vs NP problem" (Reasoning)
 
 ## Supporting Classes
 
@@ -388,19 +747,31 @@ var client = new GrokClient(new HttpClient(), "your-api-key-here");
 var thread = client.GetGrokThread();
 ```
 
-### GrokStreamingClient
-For low-level streaming:
+### GrokStreamingClient (Chat Completions)
+For low-level chat completions streaming:
 ```csharp
 var streamingClient = client.GetStreamingClient();
 streamingClient.OnChunkReceived += (s, chunk) => Console.Write(chunk.Choices[0].Delta.Content);
-await streamingClient.StartStreamAsync(new ChatCompletionRequest { /* ... */ });
+streamingClient.OnToolCallsReceived += (s, calls) =>
+    calls.ForEach(c => Console.WriteLine($"Tool: {c.Function.Name}"));
+await streamingClient.StartStreamAsync(new GrokChatCompletionRequest { /* ... */ }, CancellationToken.None);
+```
+
+### GrokResponsesStreamingClient (Responses API)
+For low-level Responses API streaming:
+```csharp
+var streamingClient = client.GetResponsesStreamingClient();
+streamingClient.OnTextDelta += (s, delta) => Console.Write(delta.Delta);
+streamingClient.OnResponseCompleted += (s, response) => Console.WriteLine($"\nDone: {response.Id}");
+await streamingClient.StartStreamAsync(new GrokResponseRequest { /* ... */ });
 ```
 
 ## Notes
 
-- **Swagger**: Built with NSwag v14.2.0.0. See [Grok API docs](https://x.ai/api-docs).
-- **Serialization**: Uses `Newtonsoft.Json` (planned switch to `System.Text.Json`).
-- **Errors**: Throws `GrokSdkException` with details.
+- **Code Generation**: Built with NSwag v14.6.3.0 from `grok-api.yaml`. See [Grok API docs](https://docs.x.ai/api).
+- **Serialization**: Uses `Newtonsoft.Json` for all API communication.
+- **Errors**: Throws `GrokSdkException` with HTTP status code and response body details.
+- **Targets**: .NET 8.0 and .NET Standard 2.0.
 
 ## Contributing
 
